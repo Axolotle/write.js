@@ -11,34 +11,32 @@ function readJSONFile(file, callback) {
 }
 
 
-
-
-function Box(jsonObj, longestText, sizeOfLongestWord, divName) {
-    // Define the dimension and create the box
-
-    this.marginX = 3;
-    this.marginY = 2;
+function Box(options) {
+    // Define base information
     this.x = 0;
     this.y = 0;
     this.spans = [];
+    this.marginX = options.marginX || 0;
+    this.marginY = options.marginY || 0;
+    this.div = options.divName;
 
-    this.init(jsonObj, longestText, sizeOfLongestWord, divName);
+    this.init(options);
 }
-Box.prototype.init = function(jsonObj, longestText, sizeOfLongestWord, divName) {
-    // Define the box dimension, setup and append it to the user window
+Box.prototype.init = function(options) {
 
-    this.defineBoxDimension(jsonObj, longestText, sizeOfLongestWord);
+    // Define the box dimension
+    this.defineBoxDimension(options.longestText, options.longestWord);
 
-    this.spans = this.setupBox(this.x, this.y);
-    this.displayBox(this.spans, divName);
+    //var lines = this.setupBox(this.x, this.y);
+    //this.drawBox(this.x, this.y, options.divName);
 
 };
-Box.prototype.defineBoxDimension = function(jsonObj, longestText, sizeOfLongestWord) {
+Box.prototype.defineBoxDimension = function(longestText, sizeOfLongestWord) {
     // Define the box dimensions (x, y) from window and texts informations
 
     function getCharaSize() {
-        // Create an span element, return the height and the width of one character
-        // and delete it
+        // Create an span element, return the height and the width of one
+        // character then delete it
         var test = document.createElement("span");
         test.style.visibility = "hidden";
         document.body.appendChild(test);
@@ -68,36 +66,55 @@ Box.prototype.defineBoxDimension = function(jsonObj, longestText, sizeOfLongestW
     }
     // Manage to fit the box in the window
     else {
+        this.x = 55 + this.marginX*2;
+        this.y = this.getBoxSizeFromText(longestText, maxW, maxH);
+    }
+};
+Box.prototype.getBoxSizeFromText = function(txt, maxW, maxH) {
+    var y = this.formatTxt(txt);
+    if (y + this.marginY*2 > maxH && this.x > maxW) {
+        return console.log("SCREEN TO SMALL");
+    } else if (y + this.marginY*2 > maxH) {
+        this.x++;
+        return this.getBoxSizeFromText(txt, maxW, maxH);
+    } else if (this.x > maxW) {
+        this.x--;
+        return this.getBoxSizeFromText(txt, maxW, maxH);
+    }
+    else {
+        return y + this.marginY*2;
+    }
 
-        if (pageW > pageH) {
-            if (maxW > 60) {
-                this.x = 60;
-                //use methods of TxtManager class to define y
-                var test = new AdaptJSON(longestText, jsonObj,
-                    {"x":this.x, "marginX": this.marginX});
-                this.y = test.txt.length + this.marginY*2;
 
+}
+Box.prototype.formatTxt = function(txt) {
 
-                while (this.y > maxH) {
-                    this.x++;
+    var line = 1;
+    var index = 0;
+    var dontEscape = ["?", "!", ":", ";"];
 
-                    test = new AdaptJSON(longestText, jsonObj,
-                        {"x":this.x, "marginX": this.marginX});
-                    this.y = test.txt.length + this.marginY*2;
+    var splittedTxt = txt.split(" ");
 
-                    if (this.x > maxW) {
-                        console.log("SCREEN TO SMALL");
-                        this.x=0;
-                        this.y=0;
-                        return
-                    }
-                }
-            }
+    var self = this;
+    splittedTxt.forEach(function(word, i, array) {
+        var width = index == 0 ? index + word.length : index + 1 + word.length;
+
+        if (width <= self.x - self.marginX*2) {
+            index += index == 0 ? word.length : 1 + word.length;
+        }
+        else if (dontEscape.indexOf(word) != -1) {
+            var lastword = array[i-1];
+            index = lastword.length + 1 + word.length;
         }
         else {
-
+            line++;
+            index = word.length;
         }
-    }
+
+    });
+
+    return line++;
+
 };
 Box.prototype.setupBox = function(x,y) {
     // Draw the box and display it on window
@@ -105,186 +122,100 @@ Box.prototype.setupBox = function(x,y) {
     function createLine(c1, c2, c3) {
         // Create a line of 'x' elements
 
-        var span = c1;
-        for(let i = 0; i < x -2; i++)
-            span += c2;
-        span += c3;
+        var line = c1;
+        for(var i = 0; i < x -2; i++)
+            line += c2;
+        line += c3;
 
-        return span;
+        return line;
     }
 
-    let spans = [];
+    var spans = [];
 
-    for (let n = 0; n < y; n++) {
-        let elem = document.createElement("span");
-        if (n == 0) {
-            elem.innerHTML = createLine("┌","─","┐</br>");
-        }
-        else if (n == y-1)
-        elem.innerHTML = createLine("└","─","┘</br>");
-        else
-        elem.innerHTML = createLine("│"," ","│</br>");
-
-        spans.push(elem);
+    for (var n = 0; n < y; n++) {
+        if (n == 0) spans.push(createLine("┌","─","┐"));
+        else if (n == y-1) spans.push(createLine("└","─","┘"));
+        else spans.push(createLine("│"," ","│"));
     }
 
     return spans;
 
 };
-Box.prototype.displayBox = function(spans, divName) {
-    // Append the box to a html element
+Box.prototype.displayBox = function(callback) {
 
-    div = document.getElementById(divName);
+    var boxLines = this.setupBox(this.x, this.y);
 
-    spans.forEach(function(line) {
-        div.appendChild(line);
+    var div = document.getElementById(this.div);
+
+    var self = this;
+    boxLines.forEach(function(line) {
+        var elem = document.createElement("span");
+        elem.innerHTML = line + "</br>";
+        div.appendChild(elem);
+        self.spans.push(elem);
     });
+
+    if (callback) callback();
+};
+Box.prototype.drawBox = function(callback) {
+
+    var div = document.getElementById(this.div);
+
+    var one = document.createElement("span");
+    var two = document.createElement("span");
+
+    one.innerHTML = "┌┐";
+    two.innerHTML = "└┘";
+
+    div.appendChild(one);
+    div.appendChild(two);
+
+    this.spans.push(one, two);
+
+    var self = this;
+    var draw = setInterval(function() {
+        if (self.spans.length < self.y) {
+
+            var elem = document.createElement("span");
+
+            var content = "│";
+            for (var i = 0; i < self.spans[0].innerHTML.length-2; i++) {
+                content += " ";
+            }
+            content += "│";
+
+            elem.innerHTML = content;
+            div.insertBefore(elem, div.lastChild);
+            self.spans.splice(self.spans.length-1, 0, elem);
+        }
+        else {
+            self.spans.forEach(function(span, i) {
+                var str = span.innerHTML;
+                if (i == 0 || i == self.spans.length-1) {
+                    span.innerHTML = str.substr(0,1) + "─" + str.substr(1);
+                }
+                else {
+                    span.innerHTML = str.substr(0,1) + " " + str.substr(1);
+                }
+            });
+        }
+        if (self.spans.length == self.y && self.spans[0].innerHTML.length == self.x) {
+            clearInterval(draw);
+            self.spans.forEach(function(span) {
+                span.innerHTML += "</br>"
+            });
+            if (callback) callback();
+
+        }
+
+    }, 10);
 
 };
 Box.prototype.printChar = function(line, index, char) {
     function setCharAt(str, i, chr) {
-        //if(index > str.length-1) return str;
         return str.substr(0,i) + chr + str.substr(i+1);
     }
 
     var str = this.spans[line+this.marginY].innerHTML;
     this.spans[line+this.marginY].innerHTML = setCharAt(str, index+this.marginX, char);
-}
-
-
-
-
-
-
-
-
-
-
-
-function AdaptJSON(obj, jsonObj, box) {
-    // Reformating json Obj
-
-    this.txt = [];
-    this.delay = 0;
-    this.startAt = [];
-    this.endAt = [];
-    this.init(obj, jsonObj, box);
-
-}
-AdaptJSON.prototype.init = function(obj, jsonObj, box) {
-
-    this.delay = obj.delay;
-    this.n = obj.n;
-
-    //console.log(jsonObj);
-    var splitted = this.splitInWords(obj.txt);
-
-
-
-    var x = box.x - box.marginX * 2;
-
-
-    if (obj.clean == true) {
-        this.cleanAt = [];
-        console.log(obj.cleanDecal);
-
-        obj.cleanDecal.forEach(function(decal, i) {
-            let start = jsonObj[decal[0]].startAt[decal[1]];
-            let end;
-            if (decal[3] == "end") {
-                end = [box.y-box.marginY*2, box.x-box.marginX*2];
-            }
-            else {
-                end = jsonObj[decal[0]].endAt[decal[1]];
-            }
-            let char = decal[2];
-            this.cleanAt.push([start, end, char]);
-        }.bind(this));
-        // this.cleanAt = jsonObj[obj.cleanDecal[0][0]].startAt[1];
-        // this.char = obj.cleanDecal[0][2];
-    }
-
-    if (obj.decal == true) {
-        let start = jsonObj[obj.txtDecal[0]].startAt[1];
-        this.txt = this.defineSentences(splitted, x, start[0], start[1]);
-    }
-    else {
-        this.txt = this.defineSentences(splitted, x);
-    }
-
-
-
-};
-AdaptJSON.prototype.splitInWords = function(txts) {
-
-    var splitted = txts.map(function(elem){
-            return elem.split(" ");
-    });
-    //console.log("SPLIT : array of array :", splitted);
-
-    return splitted; // [["word1", "word2", ...], ["word1", "word2", ...], ...]
-
-};
-AdaptJSON.prototype.defineSentences = function(splittedTxts, x, l, i) {
-    var line = l || 0;
-    var index = i || 0;
-
-    var sentence = [];
-    var sentences = [];
-    var txts = [];
-
-    var dontEscape = ["?", "!", ":", ";", "-"];
-    var charaAlone = [".", ","];
-
-    splittedTxts.forEach(function(wordsArray, i) {
-        this.startAt.push([line,index]);
-
-        wordsArray.forEach(function(word) {
-            var width = index + 1 + word.length;
-
-            if (charaAlone.indexOf(word) == 1) {
-                var lastword = sentence.pop();
-                sentence.push(lastword+word);
-                index += word.length;
-            }
-            else if (width <= x) {
-                sentence.push(word);
-
-                index += 1 + word.length;
-            }
-            else if (dontEscape.indexOf(word) === -1) {
-                sentences.push(sentence);
-
-                sentence = [word];
-                line++;
-                index = word.length;
-            }
-            else {
-                var lastword = sentence.pop();
-                sentences.push(sentence);
-
-                sentence = [lastword, word];
-                index = lastword.length + 1 + word.length;
-            }
-        });
-
-        this.endAt.push([line, index]);
-
-    }.bind(this));
-    sentences.push(sentence);
-
-    return this.wordsArrayToStringArray(sentences);
-
-};
-AdaptJSON.prototype.wordsArrayToStringArray = function(wordsArray) {
-    var sentences = wordsArray.map(function(words) {
-        return words.join(" ");
-    });
-    //console.log(sentences);
-    return sentences;
-
-};
-AdaptJSON.prototype.getStartInfo = function(decalArray, jsonObj) {
-
-
 };
