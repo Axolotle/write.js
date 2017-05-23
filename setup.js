@@ -25,13 +25,13 @@ function Box(options) {
 Box.prototype.init = function(options) {
 
     // Define the box dimension
-    this.defineBoxDimension(options.longestText, options.longestWord);
+    this.defineBoxDimension(options.longestText, options.longestWord, options.idealX);
 
     //var lines = this.setupBox(this.x, this.y);
     //this.drawBox(this.x, this.y, options.divName);
 
 };
-Box.prototype.defineBoxDimension = function(longestText, sizeOfLongestWord) {
+Box.prototype.defineBoxDimension = function(longestText, sizeOfLongestWord, idealX) {
     // Define the box dimensions (x, y) from window and texts informations
 
     function getCharaSize() {
@@ -66,7 +66,7 @@ Box.prototype.defineBoxDimension = function(longestText, sizeOfLongestWord) {
     }
     // Manage to fit the box in the window
     else {
-        this.x = 55 + this.marginX*2;
+        this.x = idealX + this.marginX*2;
         this.y = this.getBoxSizeFromText(longestText, maxW, maxH);
     }
 };
@@ -97,7 +97,15 @@ Box.prototype.formatTxt = function(txt) {
 
     var self = this;
     splittedTxt.forEach(function(word, i, array) {
+        var newLine = false;
+
         var width = index == 0 ? index + word.length : index + 1 + word.length;
+
+        if (word.indexOf("\n") > -1) {
+            word = word.replace('\n', '');
+            newLine = true;
+            console.log("newline");
+        }
 
         if (width <= self.x - self.marginX*2) {
             index += index == 0 ? word.length : 1 + word.length;
@@ -109,6 +117,11 @@ Box.prototype.formatTxt = function(txt) {
         else {
             line++;
             index = word.length;
+        }
+
+        if (newLine) {
+            line++;
+            index = 0;
         }
 
     });

@@ -1,9 +1,9 @@
-function ModifyJSON(obj, jsonObj, x) {
+function ModifyJSON(obj, jsonObj, box) {
 
-    this.init(obj, jsonObj, x);
+    this.init(obj, jsonObj, box);
 
 }
-ModifyJSON.prototype.init = function(obj, jsonObj, x) {
+ModifyJSON.prototype.init = function(obj, jsonObj, box) {
 
     this.speed = obj.speed || 70;
     this.cleanSpeed = obj.cleanSpeed || this.speed/2;
@@ -11,10 +11,56 @@ ModifyJSON.prototype.init = function(obj, jsonObj, x) {
 
 
     if (obj.cleanAt) this.cleanAt = obj.cleanAt;
+    if (obj.noClearingSpace) this.noClearingSpace = true;
+    if (obj.onTheBox) this.onTheBox = true;
 
-    this.txt = this.defineSentences(obj.txt, x, jsonObj);
+    if (Array.isArray(obj.txt)) {
+        this.txt = this.centerSentences(obj.txt, obj.charToAdd, box, jsonObj);
+    }
+    else {
+        this.txt = this.defineSentences(obj.txt, box.x-box.marginX*2, jsonObj);
+
+    }
+};
+ModifyJSON.prototype.centerSentences = function(txt, char, box, jsonObj) {
+    var self = this;
+
+    function generateCharLine(n, elem) {
+        var charLine = "";
+        for (var i = 0; i < n; i++) {
+            charLine += elem;
+        }
+        return charLine;
+    }
+    var y = box.y - box.marginY*2;
+    var x = this.onTheBox ? box.x : box.x - box.marginX*2;
 
 
+    var yToAdd = y - txt.length;
+    var xToAdd = 0;
+
+    var sentences = [];
+
+    for (var i = 0; i < Math.floor(yToAdd/2); i++) {
+        sentences.push(generateCharLine(x, char));
+    }
+
+    txt.forEach(function(line) {
+        xToAdd = x - line.length;
+        var sentence = "";
+
+        sentence += generateCharLine(Math.ceil(xToAdd/2), char);
+        sentence += line;
+        sentence += generateCharLine(Math.floor(xToAdd/2), char);
+
+        sentences.push(sentence);
+    });
+
+    for (var i = 0; i < Math.ceil(yToAdd/2); i++) {
+        sentences.push(generateCharLine(x, char));
+    }
+
+    return sentences;
 };
 ModifyJSON.prototype.defineSentences = function(txt, x, jsonObj) {
     var line = this.startAt[0],
@@ -31,6 +77,7 @@ ModifyJSON.prototype.defineSentences = function(txt, x, jsonObj) {
     splittedTxt.forEach(function(word) {
         var isTag = false;
         var tags = {};
+        var newLine = false;
 
         if (word.indexOf("<") != -1) {
             isTag = true;
@@ -48,13 +95,19 @@ ModifyJSON.prototype.defineSentences = function(txt, x, jsonObj) {
 
         }
 
-        var width = index + 1 + word.length;
+        //var width = index + 1 + word.length;
+        var width = index == 0 ? index + word.length : index + 1 + word.length;
 
+        if (word.indexOf("\n") > -1) {
+            word = word.replace('\n', '');
+            newLine = true;
+        }
         if (width <= x) {
             sentence.push(word);
 
-            if (index != 0) index += 1 + word.length;
-            else index += word.length;
+            //if (index != 0) index += 1 + word.length;
+            //else index += word.length;
+            index += index == 0 ? word.length : 1 + word.length;
         }
         else if (dontEscape.indexOf(word) > -1) {
             var lastword = sentence.pop();
@@ -70,6 +123,12 @@ ModifyJSON.prototype.defineSentences = function(txt, x, jsonObj) {
             index = word.length;
         }
 
+        if (newLine) {
+            sentences.push(sentence);
+            line++;
+            sentence = [];
+            index = 0;
+        }
         if (isTag) {
             for (var tag in tags) {
                 if (tags.hasOwnProperty(tag)) {
@@ -184,10 +243,13 @@ Animation.prototype.init = function (obj, box) {
     this.cleanSpeed = obj.cleanSpeed;
 
     if (obj.cleanAt) this.cleanAt = obj.cleanAt;
+    if (obj.noClearingSpace) this.noClearingSpace = obj.noClearingSpace;
+    if (obj.onTheBox) this.onTheBox = true;
 
     this.startAt = obj.startAt;
     this.altSpeed = obj.altSpeed || [];
     this.pause = obj.pause || [];
+
 
     this.txt = this.formatStringsToIndieChar(obj.txt);
 
@@ -206,6 +268,10 @@ Animation.prototype.formatStringsToIndieChar = function(sentences) {
 Animation.prototype.writeText = function(callback) {
     var line = this.startAt[0];
     var index = this.startAt[1];
+
+    if (this.onTheBox) {
+        index -= this.box.marginX;
+    }
 
     var l = 0;
     var i = 0;
@@ -229,6 +295,7 @@ Animation.prototype.writeText = function(callback) {
 
             var shift = self.txt[l].shift();
 
+
             if (shift == undefined) {
                 if (l >= self.txt.length - 1) {
                     if (callback)
@@ -240,15 +307,25 @@ Animation.prototype.writeText = function(callback) {
                     line++;
                     l++;
                     index = 0;
+                    if (self.onTheBox) {
+                        index -= self.box.marginX;
+                    }
                 }
                 setTimeout(write, speed);
                 return;
             }
             if (shift == "\\") {
-                if (index == 0) return;
+                if (index == 0) {
+                    setTimeout(write, speed);
+                    return;
+                }
                 else shift = " ";
             }
-
+            if (shift == " " && self.noClearingSpace) {
+                setTimeout(write, speed);
+                index++;
+                return;
+            }
             self.box.printChar(line, index, shift);
 
             index++;
