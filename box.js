@@ -11,30 +11,39 @@ function readJSONFile(file, callback) {
 }
 
 
-function Box(options) {
+function Box() {
     // Define base information
     this.x = 0;
     this.y = 0;
     this.spans = [];
-    this.marginX = options.marginX || 0;
-    this.marginY = options.marginY || 0;
-    this.div = options.divName;
 
-    this.init(options);
+
 }
-Box.prototype.init = function(options) {
+Box.prototype.init = function(opt) {
+
+    this.marginX = opt.marginX || 0;
+    this.marginY = opt.marginY || 0;
+    this.div = opt.divName;
 
     // Define the box dimension
-    this.defineBoxDimension(options.longestText, options.longestWord, options.idealX);
+    this.getPageDimension();
+
+
+    if (opt.longestText) {
+        this.getBoxSizeFromText(opt.longestText, opt.longestWord, opt.idealX);
+    }
+    else {
+        this.getBoxSizeFromData(opt.idealX, opt.idealY, opt.minX, opt.minY);
+    }
 
     //var lines = this.setupBox(this.x, this.y);
     //this.drawBox(this.x, this.y, options.divName);
 
 };
-Box.prototype.defineBoxDimension = function(longestText, sizeOfLongestWord, idealX) {
-    // Define the box dimensions (x, y) from window and texts informations
+Box.prototype.getPageDimension = function() {
+    // define the page dimension in number of characters
 
-    function getCharaSize() {
+    function getCharDim() {
         // Create an span element, return the height and the width of one
         // character then delete it
         var test = document.createElement("span");
@@ -47,44 +56,80 @@ Box.prototype.defineBoxDimension = function(longestText, sizeOfLongestWord, idea
 
         test.parentNode.removeChild(test);
 
-        return [w, h];
+        return {"w" : w, "h" : h};
     }
 
     // Get size array of a common character
-    var letterSize = getCharaSize();
+    var char = getCharDim();
 
     var pageW = window.innerWidth;
     var pageH = window.innerHeight;
 
-    // Define how many characters we can fill inside the window (including margins)
-    var maxW = parseInt(pageW / letterSize[0]);
-    var maxH = parseInt(pageH / letterSize[1]);
+    // Define how many characters we can fit inside the window (including margins)
+    this.maxW = parseInt(pageW / char.w);
+    this.maxH = parseInt(pageH / char.h);
+    //FIXME side effect function maybe not the best choice
+
+};
+Box.prototype.getBoxSizeFromData = function(idealX, idealY, minX, minY) {
+    var self = this;
+
+    function getDim() {
+        if (self.x > self.maxW) {
+
+            if (self.x-self.marginX*2 > minX) {
+                self.x--;
+                getDim();
+            }
+
+        }
+        if (self.y > self.maxH && self.y-this.marginy*2 > minY) {
+            self.y--;
+            getDim();
+        }
+    }
 
     // Check if window can at least contain the longest word with box margin
-    if (maxW < sizeOfLongestWord + this.marginX * 2) {
-        console.log("SCREEN TO SMALL");
+    if (this.maxW < minX + this.marginX * 2) {
+        console.log("SCREEN TO SMALL - need moar width");
+    }
+    else if (this.maxH < minY + this.marginY*2) {
+        console.log("SCREEN TO SMALL - need moar heigth");
     }
     // Manage to fit the box in the window
     else {
         this.x = idealX + this.marginX*2;
-        this.y = this.getBoxSizeFromText(longestText, maxW, maxH);
-    }
-};
-Box.prototype.getBoxSizeFromText = function(txt, maxW, maxH) {
-    var y = this.formatTxt(txt);
-    if (y + this.marginY*2 > maxH && this.x > maxW) {
-        return console.log("SCREEN TO SMALL");
-    } else if (y + this.marginY*2 > maxH) {
-        this.x++;
-        return this.getBoxSizeFromText(txt, maxW, maxH);
-    } else if (this.x > maxW) {
-        this.x--;
-        return this.getBoxSizeFromText(txt, maxW, maxH);
-    }
-    else {
-        return y + this.marginY*2;
+        this.y = idealY + this.marginY*2;
+        getDim();
     }
 
+}
+Box.prototype.getBoxSizeFromText = function(longestText, sizeOfLongestWord, idealX) {
+    var self = this;
+    function getDim(txt) {
+        var y = self.formatTxt(txt);
+        if (y + self.marginY*2 > self.maxH && self.x > self.maxW) {
+            return console.log("SCREEN TO SMALL");
+        } else if (y + self.marginY*2 > self.maxH) {
+            self.x++;
+            return getDim(txt);
+        } else if (self.x > self.maxW) {
+            self.x--;
+            return getDim(txt);
+        }
+        else {
+            return y + self.marginY*2;
+        }
+    }
+
+    // Check if window can at least contain the longest word with box margin
+    if (this.maxW < sizeOfLongestWord + this.marginX * 2) {
+    }
+    // Manage to fit the box in the window
+    else {
+        this.x = idealX + this.marginX*2;
+        this.y = getDim(longestText);
+    }
 
 }
 Box.prototype.formatTxt = function(txt) {
@@ -104,7 +149,6 @@ Box.prototype.formatTxt = function(txt) {
         if (word.indexOf("\n") > -1) {
             word = word.replace('\n', '');
             newLine = true;
-            console.log("newline");
         }
 
         if (width <= self.x - self.marginX*2) {
@@ -137,7 +181,7 @@ Box.prototype.setupBox = function(x,y) {
 
         var line = c1;
         for(var i = 0; i < x -2; i++)
-            line += c2;
+        line += c2;
         line += c3;
 
         return line;
@@ -156,6 +200,11 @@ Box.prototype.setupBox = function(x,y) {
 };
 Box.prototype.displayBox = function(callback) {
 
+    if (this.x == 0) {
+        this.drawError();
+        return;
+    }
+
     var boxLines = this.setupBox(this.x, this.y);
 
     var div = document.getElementById(this.div);
@@ -171,6 +220,11 @@ Box.prototype.displayBox = function(callback) {
     if (callback) callback();
 };
 Box.prototype.drawBox = function(callback) {
+
+    if (this.x == 0) {
+        this.drawError();
+        return;
+    }
 
     var div = document.getElementById(this.div);
 
@@ -224,11 +278,122 @@ Box.prototype.drawBox = function(callback) {
     }, 10);
 
 };
+Box.prototype.reDraw = function(callback) {
+    var div = document.getElementById(this.div);
+    if (this.x == 0 || this.x > this.maxW) {
+        while (div.hasChildNodes()) {
+            div.removeChild(div.lastChild);
+        }
+        this.drawError();
+        return;
+    }
+
+    var self = this;
+    self.spans.forEach(function(span, i) {
+        if (span.innerHTML.indexOf("<br>") > -1) {
+            span.innerHTML = span.innerHTML.replace("<br>", "");
+        }
+
+    });
+    var draw = setInterval(function() {
+        if(self.spans.length != self.y) {
+            if (self.spans.length < self.y) {
+
+                var elem = document.createElement("span");
+
+                var content = "│";
+                for (var i = 0; i < self.spans[0].innerHTML.length-2; i++) {
+                    content += " ";
+                }
+                content += "│";
+
+                elem.innerHTML = content;
+                div.insertBefore(elem, div.lastChild);
+                self.spans.splice(self.spans.length-1, 0, elem);
+            }
+            else {
+                self.spans.splice(self.spans.length-2, 1);
+                div.removeChild(div.childNodes[div.childNodes.length-2]);
+            }
+        }
+        else if (self.spans[0].innerHTML.length != self.x) {
+            if (self.spans[0].innerHTML.length < self.x) {
+                self.spans.forEach(function(span, i) {
+                    var str = span.innerHTML;
+                    if (i == 0 || i == self.spans.length-1) {
+                        span.innerHTML = str.substr(0,1) + "─" + str.substr(1);
+                    }
+                    else {
+                        span.innerHTML = str.substr(0,1) + " " + str.substr(1);
+                    }
+                });
+            }
+            else {
+                self.spans.forEach(function(span, i) {
+                    var str = span.innerHTML;
+
+                    span.innerHTML = str.substr(0,1) + str.substr(2);
+
+                });
+            }
+        }
+
+        else  {
+            clearInterval(draw);
+            self.spans.forEach(function(span) {
+                span.innerHTML += "</br>";
+            });
+            if (callback) callback();
+
+        }
+
+    }, 10);
+};
+Box.prototype.drawError = function() {
+    var div = document.getElementById(this.div);
+
+    var one = document.createElement("span");
+
+    one.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
+
+    div.appendChild(one);
+
+};
+Box.prototype.cleanBox = function(callback) {
+    var self = this;
+
+    cleanedLine = "";
+    for (let a = 0; a < self.x-2; a++) {
+        cleanedLine += " ";
+    }
+
+    self.spans.forEach(function(line, i, array) {
+        if (i > self.marginY && i < self.spans.length-self.marginY-1) {
+            let str = line.innerHTML;
+            let start = str.indexOf("│");
+            let end = str.lastIndexOf("│");
+
+            line.innerHTML =  str[start] + cleanedLine + str.substr(end);
+        }
+    });
+
+};
 Box.prototype.printChar = function(line, index, char) {
     function setCharAt(str, i, chr) {
-        return str.substr(0,i) + chr + str.substr(i+1);
+        return str.substr(0,i) + chr + str.substr(i+chr.length);
     }
 
     var str = this.spans[line+this.marginY].innerHTML;
     this.spans[line+this.marginY].innerHTML = setCharAt(str, index+this.marginX, char);
+};
+Box.prototype.addTags = function(tag) {
+    function setTagAt(str, openI, closeI, openTag, closeTag) {
+        return str.substring(0,openI) + openTag + str.substring(openI, closeI) + closeTag + str.substr(closeI);
+    }
+
+    var opening = "<" + tag.type + " " + tag.ref + ">";
+    var closing = "</" + tag.type + ">";
+
+    var str = this.spans[tag.line+this.marginY].innerHTML;
+    this.spans[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
 };

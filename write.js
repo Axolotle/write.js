@@ -19,7 +19,6 @@ ModifyJSON.prototype.init = function(obj, jsonObj, box) {
     }
     else {
         this.txt = this.defineSentences(obj.txt, box.x-box.marginX*2, jsonObj);
-
     }
 };
 ModifyJSON.prototype.centerSentences = function(txt, char, box, jsonObj) {
@@ -46,10 +45,44 @@ ModifyJSON.prototype.centerSentences = function(txt, char, box, jsonObj) {
     }
 
     txt.forEach(function(line) {
+        var isTag = false;
+        var tags = [];
+
+        if (line.indexOf("<r>") != -1) {
+            line = generateCharLine(x, line.replace("<r>", ""));
+        }
+        if (line.indexOf("<a") != -1) {
+            isTag = true;
+
+            let tag = {}
+            tag.line = sentences.length;
+            tag.open = line.indexOf("<");
+            tag.type = line.substr(tag.open+1, 1);
+            tag.ref = line.substring(line.indexOf(tag.type)+2, line.indexOf(">"))
+            line = line.substr(line.indexOf(">")+1);
+            tag.close = line.indexOf("<", tag.open+1);
+            line = line.substring(0,line.indexOf("<"))
+
+            tags.push(tag);
+        }
+
         xToAdd = x - line.length;
         var sentence = "";
 
+
+
         sentence += generateCharLine(Math.ceil(xToAdd/2), char);
+        if (isTag) {
+            if (self.tags == undefined) {
+                self.tags = [];
+            }
+            tags.forEach(function(tag) {
+                tag.open += sentence.length;
+                tag.close += sentence.length;
+                self.tags.push(tag)
+            });
+
+        }
         sentence += line;
         sentence += generateCharLine(Math.floor(xToAdd/2), char);
 
@@ -150,13 +183,13 @@ ModifyJSON.prototype.manageTags = function (tag, pos, jsonObj) {
 
     // starting at (startAt) tag <s>
     if (tag[0] == "s") {
-        var n = parseInt(tag.substr(1));
+        var n = parseInt(tag.substr(1))+1;
         jsonObj[n].startAt = pos;
     }
     // cleaning at (cleanAt) tag <c>
     else if (tag[0] == "c") {
         // get the obj index to refer to
-        var n = parseInt(tag.substr(1,tag.indexOf("-")));
+        var n = parseInt(tag.substr(1,tag.indexOf("-")))+1;
         // get the character and convert it into an array index ("a" = 0, ...)
         var ref = tag.substr(tag.indexOf("-")+1, 1).charCodeAt(0) - 97;
         // get the cleaning or end characters
@@ -240,11 +273,12 @@ function Animation(obj, box) {
 }
 Animation.prototype.init = function (obj, box) {
 
-    this.cleanSpeed = obj.cleanSpeed;
+    this.cleanSpeed = 5;//obj.cleanSpeed;
 
     if (obj.cleanAt) this.cleanAt = obj.cleanAt;
     if (obj.noClearingSpace) this.noClearingSpace = obj.noClearingSpace;
     if (obj.onTheBox) this.onTheBox = true;
+    if (obj.tags) this.tags = obj.tags;
 
     this.startAt = obj.startAt;
     this.altSpeed = obj.altSpeed || [];
@@ -254,7 +288,7 @@ Animation.prototype.init = function (obj, box) {
     this.txt = this.formatStringsToIndieChar(obj.txt);
 
     this.box = box;
-    this.speed = obj.speed;
+    this.speed = 10;//obj.speed;
 };
 Animation.prototype.formatStringsToIndieChar = function(sentences) {
 
@@ -273,6 +307,14 @@ Animation.prototype.writeText = function(callback) {
         index -= this.box.marginX;
     }
 
+    var stop = false;
+    document.addEventListener("keydown", function(e) {
+        if (e.keyCode == '39') {
+            e.preventDefault();
+            stop = true;
+        }
+    });
+
     var l = 0;
     var i = 0;
 
@@ -280,6 +322,13 @@ Animation.prototype.writeText = function(callback) {
 
     var self = this;
     var write = function() {
+        if (stop) {
+            self.box.cleanBox();
+            if (callback) {
+                callback();
+            }
+            return;
+        }
 
         if (self.pause[0] != undefined && l == self.pause[0][0][0] && index == self.pause[0][0][1]) {
             var pause = self.pause.shift();
@@ -337,6 +386,21 @@ Animation.prototype.writeText = function(callback) {
     write();
 
 };
+Animation.prototype.appendText = function(callback) {
+    var self = this;
+    this.txt.forEach(function(line, i) {
+        self.box.printChar(i, 0, line.join(""));
+    });
+
+    if (self.tags) {
+        self.tags.forEach(function(tag) {
+            self.box.addTags(tag);
+        })
+    }
+    if (callback) {
+        callback();
+    }
+}
 Animation.prototype.cleanEndOfLine = function(line, index, char) {
     var self = this;
     var cleaning = setInterval(function() {
@@ -411,6 +475,6 @@ Animation.prototype.reversedClean = function(pos, callback) {
             self.box.printChar(line, index--, char);
         }
 
-
     }, self.cleanSpeed);
+
 };
