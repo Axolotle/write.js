@@ -377,6 +377,23 @@ Box.prototype.cleanBox = function(callback) {
         }
     });
 
+    if (callback) {
+        callback();
+    }
+
+};
+Box.prototype.rebootLine = function(line) {
+    var space = "";
+    if (!String.prototype.repeat)
+        for (var a = 0; a < this.x-2; a++) space += " ";
+    else space = " ".repeat(this.x-2);
+
+    let str = this.spans[line+this.marginY].innerHTML;
+    let start = str.indexOf("│");
+    let end = str.lastIndexOf("│");
+
+    this.spans[line+this.marginY].innerHTML =  str[start] + space + str.substr(end);
+
 };
 Box.prototype.printChar = function(line, index, char) {
     function setCharAt(str, i, chr) {
@@ -397,3 +414,46 @@ Box.prototype.addTags = function(tag) {
     var str = this.spans[tag.line+this.marginY].innerHTML;
     this.spans[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
 };
+
+
+
+Box.prototype.fillScreen = function() {
+    console.log(this.x, this.y);
+    var self = this;
+
+var chara = [
+     "⠀","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏",
+     "⠐","⠑","⠒","⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟",
+     "⠠","⠡","⠢","⠣","⠤","⠥","⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯",
+     "⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸","⠹","⠺","⠻","⠼","⠽","⠾","⠿"
+
+    // " ", "─", "│", "┌", "┐", "└", "┘", "├", "┤", "┬", "┴", "┼", "╭", "╮", "╯", "╰", "╴", "╵", "╶", "╷"
+    //"#", "/", "'", ".", ",", "%", "~", "-", "*", "~", "-", "*","~", "-", "*"
+    //" ", " "," "," "," ","─", "│", "├", "┤", "┬", "┴", "┼"
+]
+    //var txt = [];
+    function getRandomArbitrary(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+    }
+
+
+
+    console.log("lol");
+    var fill = setInterval(function() {
+        //txt = [];
+        for (var i = 0; i < self.y -self.marginY*2; i++) {
+            var sentence = "";
+            for (var j = 0; j < self.x - self.marginX*2; j++) {
+                var c = getRandomArbitrary(0, chara.length);
+                sentence += chara[c];
+            }
+            self.printChar(i, 0, sentence);
+        }
+
+        // txt.forEach(function(sentence, line) {
+        //     self.printChar(line, 0, sentence);
+        // });
+
+    }, 10);
+
+}

@@ -15,7 +15,12 @@ ModifyJSON.prototype.init = function(obj, jsonObj, box) {
     if (obj.onTheBox) this.onTheBox = true;
 
     if (Array.isArray(obj.txt)) {
-        this.txt = this.centerSentences(obj.txt, obj.charToAdd, box, jsonObj);
+        if (obj.interaction == "mousewheel") {
+            this.txt = this.combineSentences(obj.txt, box);
+        }
+        else {
+            this.txt = this.centerSentences(obj.txt, obj.charToAdd, box, jsonObj);
+        }
     }
     else {
         this.txt = this.defineSentences(obj.txt, box.x-box.marginX*2, jsonObj);
@@ -93,6 +98,42 @@ ModifyJSON.prototype.centerSentences = function(txt, char, box, jsonObj) {
         sentences.push(generateCharLine(x, char));
     }
 
+    return sentences;
+};
+ModifyJSON.prototype.combineSentences = function(txts, box) {
+    var self = this;
+
+    var sentences = [];
+    var starters = [[0,0]];
+
+    txts.forEach(function(txt, txtIndex) {
+        var t = "";
+
+        if (txtIndex != 0) {
+            let previousTxt = starters[txtIndex][0];
+            let previousIndex = starters[txtIndex][1];
+            t += sentences[previousTxt].substr(0, previousIndex);
+        }
+
+        while (txt.indexOf("<") != -1) {
+            var startIndex = txt.indexOf("<");
+            var endIndex = txt.indexOf(">");
+            var tag = parseInt(txt.substring(startIndex+2, endIndex));
+            starters[tag] = [txtIndex, startIndex+t.length];
+
+            txt = txt.substr(0,startIndex) + txt.substr(endIndex+1);
+        }
+
+        t += txt;
+        sentences.push(t);
+    });
+
+    sentences.forEach(function(sentence, i) {
+        sentence = sentence.substr(0,starters[i][1]) + "<t"+i+">" + sentence.substr(starters[i][1]);
+        sentences[i] = self.defineSentences(sentence, box.x-box.marginX*2);
+    });
+
+    console.log(sentences);
     return sentences;
 };
 ModifyJSON.prototype.defineSentences = function(txt, x, jsonObj) {
@@ -183,13 +224,20 @@ ModifyJSON.prototype.manageTags = function (tag, pos, jsonObj) {
 
     // starting at (startAt) tag <s>
     if (tag[0] == "s") {
-        var n = parseInt(tag.substr(1))+1;
+        var n = parseInt(tag.substr(1));
         jsonObj[n].startAt = pos;
+    }
+    else if (tag[0] == "t") {
+        var n = parseInt(tag.substr(1));
+        if (!this.checkPoint) {
+            this.checkPoint = [];
+        }
+        this.checkPoint[n] = pos;
     }
     // cleaning at (cleanAt) tag <c>
     else if (tag[0] == "c") {
         // get the obj index to refer to
-        var n = parseInt(tag.substr(1,tag.indexOf("-")))+1;
+        var n = parseInt(tag.substr(1,tag.indexOf("-")));
         // get the character and convert it into an array index ("a" = 0, ...)
         var ref = tag.substr(tag.indexOf("-")+1, 1).charCodeAt(0) - 97;
         // get the cleaning or end characters
@@ -273,22 +321,23 @@ function Animation(obj, box) {
 }
 Animation.prototype.init = function (obj, box) {
 
-    this.cleanSpeed = 5;//obj.cleanSpeed;
+    this.cleanSpeed = obj.cleanSpeed;
 
     if (obj.cleanAt) this.cleanAt = obj.cleanAt;
     if (obj.noClearingSpace) this.noClearingSpace = obj.noClearingSpace;
     if (obj.onTheBox) this.onTheBox = true;
     if (obj.tags) this.tags = obj.tags;
+    if (obj.checkPoint) this.checkPoint = obj.checkPoint;
 
     this.startAt = obj.startAt;
     this.altSpeed = obj.altSpeed || [];
     this.pause = obj.pause || [];
 
-
-    this.txt = this.formatStringsToIndieChar(obj.txt);
+    // FIXME string to char on specific method
+    this.txt = obj.txt;
 
     this.box = box;
-    this.speed = 10;//obj.speed;
+    this.speed = obj.speed;
 };
 Animation.prototype.formatStringsToIndieChar = function(sentences) {
 
@@ -300,6 +349,8 @@ Animation.prototype.formatStringsToIndieChar = function(sentences) {
 
 };
 Animation.prototype.writeText = function(callback) {
+    this.txt = this.formatStringsToIndieChar(this.txt);
+
     var line = this.startAt[0];
     var index = this.startAt[1];
 
@@ -307,13 +358,13 @@ Animation.prototype.writeText = function(callback) {
         index -= this.box.marginX;
     }
 
-    var stop = false;
-    document.addEventListener("keydown", function(e) {
-        if (e.keyCode == '39') {
-            e.preventDefault();
-            stop = true;
-        }
-    });
+    // var stop = false;
+    // document.addEventListener("keydown", function(e) {
+    //     if (e.keyCode == '39') {
+    //         e.preventDefault();
+    //         stop = true;
+    //     }
+    // });
 
     var l = 0;
     var i = 0;
@@ -322,13 +373,13 @@ Animation.prototype.writeText = function(callback) {
 
     var self = this;
     var write = function() {
-        if (stop) {
-            self.box.cleanBox();
-            if (callback) {
-                callback();
-            }
-            return;
-        }
+        // if (stop) {
+        //     self.box.cleanBox();
+        //     if (callback) {
+        //         callback();
+        //     }
+        //     return;
+        // }
 
         if (self.pause[0] != undefined && l == self.pause[0][0][0] && index == self.pause[0][0][1]) {
             var pause = self.pause.shift();
@@ -389,7 +440,7 @@ Animation.prototype.writeText = function(callback) {
 Animation.prototype.appendText = function(callback) {
     var self = this;
     this.txt.forEach(function(line, i) {
-        self.box.printChar(i, 0, line.join(""));
+        self.box.printChar(i, 0, line);
     });
 
     if (self.tags) {
@@ -400,7 +451,195 @@ Animation.prototype.appendText = function(callback) {
     if (callback) {
         callback();
     }
-}
+};
+Animation.prototype.addWord = function(callback) {
+    var self = this;
+
+    this.txt.forEach(function(txts, i) {
+         txts.forEach(function(sentences, j) {
+             self.txt[i][j] = sentences.split(" ");
+         });
+    });
+
+    console.log(this.txt);
+    var n = l = i = index = 0;
+    var end = false;
+    var check = false;
+
+    var lastEnding = [];
+
+    /////////////////////////////////////////////////////////
+    function MouseWheelHandler(e) {
+    	// cross-browser wheel delta
+    	var e = window.event || e; // old IE support
+    	var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+        e.preventDefault();
+        if (delta == 1) {
+            add();
+        }
+        else {
+            remove();
+        }
+
+    	return false;
+    }
+    /////////////////////////////////////////////////////////
+    if (window.addEventListener) {
+        // IE9, Chrome, Safari, Opera
+        window.addEventListener("mousewheel", function(e){MouseWheelHandler(e)}, false);
+        // Firefox
+        window.addEventListener("DOMMouseScroll", function(e){MouseWheelHandler(e)}, false);
+    }
+    // IE 6/7/8
+    else window.attachEvent("onmousewheel", function(e){MouseWheelHandler(e)});
+    /////////////////////////////////////////////////////////
+
+    function rayer(start, ending, oneLine) {
+
+
+        var tag = {
+            "type" : "s",
+            "ref": "",
+        };
+
+        if (start[0] == ending[0]) {
+            tag.line = start[0];
+            tag.open = start[1];
+            tag.close = ending[1];
+            self.box.addTags(tag);
+        }
+        else {
+            for (var z = ending[0]; z >= start[0]; z--) {
+                tag.line = z;
+                if (z == start[0]) {
+                    tag.open = start[1];
+                    tag.close = lastEnding[z]-1;
+                }
+                else if (z == ending[0]) {
+                    tag.open = 0;
+                    tag.close = ending[1];
+                }
+                else {
+                    tag.open = 0;
+                    tag.close = lastEnding[z]-1;
+                }
+
+                self.box.addTags(tag);
+            }
+        }
+
+
+
+    }
+
+    function add() {
+        var nextWord = self.txt[n][l][i];
+
+        if (nextWord == undefined) {
+            if (self.txt[n][l+1] == undefined) {
+                if (!end) {
+                    end = true;
+                    rayer(self.checkPoint[n+1], [l, index-1]);
+                }
+                return;
+            }
+            else {
+                lastEnding.push(index);
+                l++;
+                i = index = 0;
+
+                nextWord = self.txt[n][l][i];
+            }
+        }
+
+        if (end) {
+            self.box.rebootLine(l);
+            self.box.printChar(l, 0, self.txt[n][l].slice(0,i).join(" "));
+            self.box.printChar(l, index, nextWord);
+            index += nextWord.length + 1;
+            i++;
+            if (index < self.box.x - self.box.marginX*2+3) {
+                if (l == self.checkPoint[n+1][0] && index >= self.checkPoint[n+1][1]) {
+                    rayer(self.checkPoint[n+1], [l,index-1]);
+                }
+                else {
+                    if (l == self.checkPoint[n+1][0] && index == self.checkPoint[n+1][1]) {
+                    }
+                    else {
+                        rayer([l,0], [l,index-1]);
+                    }
+                }
+            }
+
+        }
+        else {
+            self.box.printChar(l, index, nextWord);
+            index += nextWord.length + 1;
+            i++;
+        }
+
+    }
+
+    function remove() {
+
+        var lastWord = self.txt[n][l][i-1];
+        if (lastWord == undefined) {
+            if (l <= 0) {
+                return;
+            }
+            else {
+                l--;
+                i = self.txt[n][l].length-1 ;
+                lastWord = self.txt[n][l][i];
+                index = lastEnding.pop()- lastWord.length-1;
+            }
+        }
+        else {
+            index -= lastWord.length+1;
+            i--;
+        }
+
+        var space = "";
+        if (!String.prototype.repeat)
+            for (var a = 0; a < lastWord.length; a++) space += " ";
+        else space = " ".repeat(lastWord.length);
+
+        if (end) {
+            self.box.rebootLine(l);
+            self.box.printChar(l, 0, self.txt[n][l].slice(0,i).join(" "));
+            self.box.printChar(l, index, space);
+            if (index > 0) {
+                if (l == self.checkPoint[n+1][0] && index > self.checkPoint[n+1][1]) {
+                    rayer(self.checkPoint[n+1], [l,index-1]);
+                }
+                else {
+                    if (l == self.checkPoint[n+1][0] && index == self.checkPoint[n+1][1]) {
+                        console.log("yep");
+                    }
+                    else {
+                        rayer([l,0], [l,index-1]);
+                    }
+                }
+            }
+
+        }
+        else {
+            self.box.printChar(l, index, space);
+        }
+
+
+
+        if (self.checkPoint[n+1] != undefined) {
+            if (end == true && l == self.checkPoint[n+1][0] && index == self.checkPoint[n+1][1]) {
+                n++;
+                end = false;
+            }
+        }
+
+    }
+
+
+};
 Animation.prototype.cleanEndOfLine = function(line, index, char) {
     var self = this;
     var cleaning = setInterval(function() {
