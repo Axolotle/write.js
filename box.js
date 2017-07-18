@@ -15,7 +15,7 @@ function Box() {
     // Define base information
     this.x = 0;
     this.y = 0;
-    this.spans = [];
+    this.ps = [];
 
 
 }
@@ -34,6 +34,10 @@ Box.prototype.init = function(opt) {
     }
     else {
         this.getBoxSizeFromData(opt.idealX, opt.idealY, opt.minX, opt.minY);
+    }
+
+    if (opt.episodes) {
+        this.episodes = opt.episodes;
     }
 
     //var lines = this.setupBox(this.x, this.y);
@@ -55,7 +59,7 @@ Box.prototype.getPageDimension = function() {
         var h = test.offsetHeight;
 
         test.parentNode.removeChild(test);
-
+        console.log(w);
         return {"w" : w, "h" : h};
     }
 
@@ -187,15 +191,15 @@ Box.prototype.setupBox = function(x,y) {
         return line;
     }
 
-    var spans = [];
+    var ps = [];
 
     for (var n = 0; n < y; n++) {
-        if (n == 0) spans.push(createLine("┌","─","┐"));
-        else if (n == y-1) spans.push(createLine("└","─","┘"));
-        else spans.push(createLine("│"," ","│"));
+        if (n == 0) ps.push(createLine("┌","─","┐"));
+        else if (n == y-1) ps.push(createLine("└","─","┘"));
+        else ps.push(createLine("│"," ","│"));
     }
 
-    return spans;
+    return ps;
 
 };
 Box.prototype.displayBox = function(callback) {
@@ -211,10 +215,10 @@ Box.prototype.displayBox = function(callback) {
 
     var self = this;
     boxLines.forEach(function(line) {
-        var elem = document.createElement("span");
-        elem.innerHTML = line + "</br>";
+        var elem = document.createElement("p");
+        elem.innerHTML = line;
         div.appendChild(elem);
-        self.spans.push(elem);
+        self.ps.push(elem);
     });
 
     if (callback) callback();
@@ -228,8 +232,8 @@ Box.prototype.drawBox = function(callback) {
 
     var div = document.getElementById(this.div);
 
-    var one = document.createElement("span");
-    var two = document.createElement("span");
+    var one = document.createElement("p");
+    var two = document.createElement("p");
 
     one.innerHTML = "┌┐";
     two.innerHTML = "└┘";
@@ -237,39 +241,39 @@ Box.prototype.drawBox = function(callback) {
     div.appendChild(one);
     div.appendChild(two);
 
-    this.spans.push(one, two);
+    this.ps.push(one, two);
 
     var self = this;
     var draw = setInterval(function() {
-        if (self.spans.length < self.y) {
+        if (self.ps.length < self.y) {
 
-            var elem = document.createElement("span");
+            var elem = document.createElement("p");
 
             var content = "│";
-            for (var i = 0; i < self.spans[0].innerHTML.length-2; i++) {
+            for (var i = 0; i < self.ps[0].innerHTML.length-2; i++) {
                 content += " ";
             }
             content += "│";
 
             elem.innerHTML = content;
             div.insertBefore(elem, div.lastChild);
-            self.spans.splice(self.spans.length-1, 0, elem);
+            self.ps.splice(self.ps.length-1, 0, elem);
         }
         else {
-            self.spans.forEach(function(span, i) {
-                var str = span.innerHTML;
-                if (i == 0 || i == self.spans.length-1) {
-                    span.innerHTML = str.substr(0,1) + "─" + str.substr(1);
+            self.ps.forEach(function(ps, i) {
+                var str = ps.innerHTML;
+                if (i == 0 || i == self.ps.length-1) {
+                    ps.innerHTML = str.substr(0,1) + "─" + str.substr(1);
                 }
                 else {
-                    span.innerHTML = str.substr(0,1) + " " + str.substr(1);
+                    ps.innerHTML = str.substr(0,1) + " " + str.substr(1);
                 }
             });
         }
-        if (self.spans.length == self.y && self.spans[0].innerHTML.length == self.x) {
+        if (self.ps.length == self.y && self.ps[0].innerHTML.length == self.x) {
             clearInterval(draw);
-            self.spans.forEach(function(span) {
-                span.innerHTML += "</br>"
+            self.ps.forEach(function(ps) {
+                ps.innerHTML += "";
             });
             if (callback) callback();
 
@@ -289,50 +293,50 @@ Box.prototype.reDraw = function(callback) {
     }
 
     var self = this;
-    self.spans.forEach(function(span, i) {
-        if (span.innerHTML.indexOf("<br>") > -1) {
-            span.innerHTML = span.innerHTML.replace("<br>", "");
-        }
-
-    });
+    // self.ps.forEach(function(ps, i) {
+    //     if (ps.innerHTML.indexOf("<br>") > -1) {
+    //         ps.innerHTML = ps.innerHTML.replace("<br>", "");
+    //     }
+    //
+    // });
     var draw = setInterval(function() {
-        if(self.spans.length != self.y) {
-            if (self.spans.length < self.y) {
+        if(self.ps.length != self.y) {
+            if (self.ps.length < self.y) {
 
-                var elem = document.createElement("span");
+                var elem = document.createElement("p");
 
                 var content = "│";
-                for (var i = 0; i < self.spans[0].innerHTML.length-2; i++) {
+                for (var i = 0; i < self.ps[0].innerHTML.length-2; i++) {
                     content += " ";
                 }
                 content += "│";
 
                 elem.innerHTML = content;
                 div.insertBefore(elem, div.lastChild);
-                self.spans.splice(self.spans.length-1, 0, elem);
+                self.ps.splice(self.ps.length-1, 0, elem);
             }
             else {
-                self.spans.splice(self.spans.length-2, 1);
+                self.ps.splice(self.ps.length-2, 1);
                 div.removeChild(div.childNodes[div.childNodes.length-2]);
             }
         }
-        else if (self.spans[0].innerHTML.length != self.x) {
-            if (self.spans[0].innerHTML.length < self.x) {
-                self.spans.forEach(function(span, i) {
-                    var str = span.innerHTML;
-                    if (i == 0 || i == self.spans.length-1) {
-                        span.innerHTML = str.substr(0,1) + "─" + str.substr(1);
+        else if (self.ps[0].innerHTML.length != self.x) {
+            if (self.ps[0].innerHTML.length < self.x) {
+                self.ps.forEach(function(ps, i) {
+                    var str = ps.innerHTML;
+                    if (i == 0 || i == self.ps.length-1) {
+                        ps.innerHTML = str.substr(0,1) + "─" + str.substr(1);
                     }
                     else {
-                        span.innerHTML = str.substr(0,1) + " " + str.substr(1);
+                        ps.innerHTML = str.substr(0,1) + " " + str.substr(1);
                     }
                 });
             }
             else {
-                self.spans.forEach(function(span, i) {
-                    var str = span.innerHTML;
+                self.ps.forEach(function(ps, i) {
+                    var str = ps.innerHTML;
 
-                    span.innerHTML = str.substr(0,1) + str.substr(2);
+                    ps.innerHTML = str.substr(0,1) + str.substr(2);
 
                 });
             }
@@ -340,9 +344,9 @@ Box.prototype.reDraw = function(callback) {
 
         else  {
             clearInterval(draw);
-            self.spans.forEach(function(span) {
-                span.innerHTML += "</br>";
-            });
+            // self.ps.forEach(function(span) {
+            //     ps.innerHTML += "</br>";
+            // });
             if (callback) callback();
 
         }
@@ -367,8 +371,8 @@ Box.prototype.cleanBox = function(callback) {
         cleanedLine += " ";
     }
 
-    self.spans.forEach(function(line, i, array) {
-        if (i > self.marginY && i < self.spans.length-self.marginY-1) {
+    self.ps.forEach(function(line, i, array) {
+        if (i > self.marginY && i < self.ps.length-self.marginY-1) {
             let str = line.innerHTML;
             let start = str.indexOf("│");
             let end = str.lastIndexOf("│");
@@ -388,11 +392,11 @@ Box.prototype.rebootLine = function(line) {
         for (var a = 0; a < this.x-2; a++) space += " ";
     else space = " ".repeat(this.x-2);
 
-    let str = this.spans[line+this.marginY].innerHTML;
+    let str = this.ps[line+this.marginY].innerHTML;
     let start = str.indexOf("│");
     let end = str.lastIndexOf("│");
 
-    this.spans[line+this.marginY].innerHTML =  str[start] + space + str.substr(end);
+    this.ps[line+this.marginY].innerHTML =  str[start] + space + str.substr(end);
 
 };
 Box.prototype.printChar = function(line, index, char) {
@@ -400,8 +404,8 @@ Box.prototype.printChar = function(line, index, char) {
         return str.substr(0,i) + chr + str.substr(i+chr.length);
     }
 
-    var str = this.spans[line+this.marginY].innerHTML;
-    this.spans[line+this.marginY].innerHTML = setCharAt(str, index+this.marginX, char);
+    var str = this.ps[line+this.marginY].innerHTML;
+    this.ps[line+this.marginY].innerHTML = setCharAt(str, index+this.marginX, char);
 };
 Box.prototype.addTags = function(tag) {
     function setTagAt(str, openI, closeI, openTag, closeTag) {
@@ -411,8 +415,8 @@ Box.prototype.addTags = function(tag) {
     var opening = "<" + tag.type + " " + tag.ref + ">";
     var closing = "</" + tag.type + ">";
 
-    var str = this.spans[tag.line+this.marginY].innerHTML;
-    this.spans[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
+    var str = this.ps[tag.line+this.marginY].innerHTML;
+    this.ps[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
 };
 
 
@@ -422,14 +426,18 @@ Box.prototype.fillScreen = function() {
     var self = this;
 
 var chara = [
-     "⠀","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏",
-     "⠐","⠑","⠒","⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟",
-     "⠠","⠡","⠢","⠣","⠤","⠥","⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯",
-     "⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸","⠹","⠺","⠻","⠼","⠽","⠾","⠿"
+    //  "⠀","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏",
+    //  "⠐","⠑","⠒","⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟",
+    //  "⠠","⠡","⠢","⠣","⠤","⠥","⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯",
+    //  "⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸","⠹","⠺","⠻","⠼","⠽","⠾","⠿"
 
-    // " ", "─", "│", "┌", "┐", "└", "┘", "├", "┤", "┬", "┴", "┼", "╭", "╮", "╯", "╰", "╴", "╵", "╶", "╷"
+    " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+    " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+    " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+    " ", "─", "│", "┌", "┐", "└", "┘", "├", "┤", "┬", "┴", "┼", "╭", "╮", "╯",
+    "╰", "╴", "╵", "╶", "╷"
     //"#", "/", "'", ".", ",", "%", "~", "-", "*", "~", "-", "*","~", "-", "*"
-    //" ", " "," "," "," ","─", "│", "├", "┤", "┬", "┴", "┼"
+    //" ", "─", "│", "├", "┤", "┬", "┴", "┼"
 ]
     //var txt = [];
     function getRandomArbitrary(min, max) {
@@ -439,9 +447,13 @@ var chara = [
 
 
     console.log("lol");
-    var fill = setInterval(function() {
+    //var fill = setInterval(function() {
         //txt = [];
         for (var i = 0; i < self.y -self.marginY*2; i++) {
+            if (i % 5 == 0) {
+                console.log(chara.shift());
+                //chara.shift();
+            }
             var sentence = "";
             for (var j = 0; j < self.x - self.marginX*2; j++) {
                 var c = getRandomArbitrary(0, chara.length);
@@ -454,6 +466,43 @@ var chara = [
         //     self.printChar(line, 0, sentence);
         // });
 
-    }, 10);
+    //}, 100);
+
+}
+Box.prototype.menu = function() {
+    var self = this;
+    var div = document.getElementById(this.div);
+
+    var pos = 1;
+    for (var i = 0; i <= this.episodes; i++) {
+        let one = two = true;
+        this.ps.forEach(function(line, index) {
+            if (index < pos) {
+                line.innerHTML += " ".repeat(2);
+            }
+            else {
+                if (one) {
+                    line.innerHTML += "─┐";
+                    one = false;
+                }
+                else if (two) {
+                    line.innerHTML += "<a class='ep'>"+i+"</a>│";
+                    two = false;
+                }
+                else {
+                    line.innerHTML += " │";
+                }
+
+            }
+        });
+        var elem = document.createElement("p");
+        elem.innerHTML = " ".repeat(pos*2) + "└" + "─".repeat(this.x-2) + "┘";
+
+        div.appendChild(elem);
+
+        this.ps.push(elem);
+        pos++;
+    }
+
 
 }

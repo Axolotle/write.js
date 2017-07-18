@@ -452,7 +452,7 @@ Animation.prototype.appendText = function(callback) {
         callback();
     }
 };
-Animation.prototype.addWord = function(callback) {
+Animation.prototype.addWord = function(eventlistener, callback) {
     var self = this;
 
     this.txt.forEach(function(txts, i) {
@@ -467,8 +467,8 @@ Animation.prototype.addWord = function(callback) {
     var check = false;
 
     var lastEnding = [];
-
-    /////////////////////////////////////////////////////////
+    console.log(eventlistener);
+    /*////////////////////////////////////////////////////////
     function MouseWheelHandler(e) {
     	// cross-browser wheel delta
     	var e = window.event || e; // old IE support
@@ -492,7 +492,7 @@ Animation.prototype.addWord = function(callback) {
     }
     // IE 6/7/8
     else window.attachEvent("onmousewheel", function(e){MouseWheelHandler(e)});
-    /////////////////////////////////////////////////////////
+    /*////////////////////////////////////////////////////////
 
     function rayer(start, ending, oneLine) {
 
@@ -637,6 +637,7 @@ Animation.prototype.addWord = function(callback) {
         }
 
     }
+    eventlistener(self);
 
 
 };
