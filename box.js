@@ -293,12 +293,7 @@ Box.prototype.reDraw = function(callback) {
     }
 
     var self = this;
-    // self.ps.forEach(function(ps, i) {
-    //     if (ps.innerHTML.indexOf("<br>") > -1) {
-    //         ps.innerHTML = ps.innerHTML.replace("<br>", "");
-    //     }
-    //
-    // });
+
     var draw = setInterval(function() {
         if(self.ps.length != self.y) {
             if (self.ps.length < self.y) {
@@ -356,11 +351,34 @@ Box.prototype.reDraw = function(callback) {
 Box.prototype.drawError = function() {
     var div = document.getElementById(this.div);
 
-    var one = document.createElement("span");
-
+    var elem = document.createElement("p");
     one.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
+    div.appendChild(elem);
 
-    div.appendChild(one);
+};
+Box.prototype.resetBox = function(callback) {
+    var self = this;
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function removeRow() {
+        var div = document.getElementById(self.div);
+
+        while (self.ps.length > self.y) {
+            div.removeChild(div.lastChild);
+            self.ps.pop();
+
+            self.ps.forEach(function(line, i, array) {
+                line.innerHTML = line.innerHTML.substr(0, line.innerHTML.length-2);
+            });
+            await sleep(10);
+        }
+    }
+
+    self.removeTags();
+    removeRow();
 
 };
 Box.prototype.cleanBox = function(callback) {
@@ -389,7 +407,7 @@ Box.prototype.cleanBox = function(callback) {
 Box.prototype.rebootLine = function(line) {
     var space = "";
     if (!String.prototype.repeat)
-        for (var a = 0; a < this.x-2; a++) space += " ";
+    for (var a = 0; a < this.x-2; a++) space += " ";
     else space = " ".repeat(this.x-2);
 
     let str = this.ps[line+this.marginY].innerHTML;
@@ -418,27 +436,40 @@ Box.prototype.addTags = function(tag) {
     var str = this.ps[tag.line+this.marginY].innerHTML;
     this.ps[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
 };
+Box.prototype.removeTags = function() {
 
+    this.ps.forEach(function(p) {
+        if (p.children) {
+            for (var i = 0; i < p.children.length; i++) {
+                var index = p.innerHTML.indexOf("<");
+                var txt = p.children[i].innerHTML;
+
+                p.removeChild(p.children[i]);
+                p.innerHTML = p.innerHTML.substr(0, index) + txt + p.innerHTML.substr(index);
+            }
+        }
+    });
+};
 
 
 Box.prototype.fillScreen = function() {
     console.log(this.x, this.y);
     var self = this;
 
-var chara = [
-    //  "⠀","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏",
-    //  "⠐","⠑","⠒","⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟",
-    //  "⠠","⠡","⠢","⠣","⠤","⠥","⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯",
-    //  "⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸","⠹","⠺","⠻","⠼","⠽","⠾","⠿"
+    var chara = [
+        //  "⠀","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏",
+        //  "⠐","⠑","⠒","⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟",
+        //  "⠠","⠡","⠢","⠣","⠤","⠥","⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯",
+        //  "⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸","⠹","⠺","⠻","⠼","⠽","⠾","⠿"
 
-    " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
-    " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
-    " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
-    " ", "─", "│", "┌", "┐", "└", "┘", "├", "┤", "┬", "┴", "┼", "╭", "╮", "╯",
-    "╰", "╴", "╵", "╶", "╷"
-    //"#", "/", "'", ".", ",", "%", "~", "-", "*", "~", "-", "*","~", "-", "*"
-    //" ", "─", "│", "├", "┤", "┬", "┴", "┼"
-]
+        " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+        " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+        " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+        " ", "─", "│", "┌", "┐", "└", "┘", "├", "┤", "┬", "┴", "┼", "╭", "╮", "╯",
+        "╰", "╴", "╵", "╶", "╷"
+        //"#", "/", "'", ".", ",", "%", "~", "-", "*", "~", "-", "*","~", "-", "*"
+        //" ", "─", "│", "├", "┤", "┬", "┴", "┼"
+    ]
     //var txt = [];
     function getRandomArbitrary(min, max) {
         return Math.floor(Math.random() * (max - min) + min);
@@ -448,23 +479,23 @@ var chara = [
 
     console.log("lol");
     //var fill = setInterval(function() {
-        //txt = [];
-        for (var i = 0; i < self.y -self.marginY*2; i++) {
-            if (i % 5 == 0) {
-                console.log(chara.shift());
-                //chara.shift();
-            }
-            var sentence = "";
-            for (var j = 0; j < self.x - self.marginX*2; j++) {
-                var c = getRandomArbitrary(0, chara.length);
-                sentence += chara[c];
-            }
-            self.printChar(i, 0, sentence);
+    //txt = [];
+    for (var i = 0; i < self.y -self.marginY*2; i++) {
+        if (i % 5 == 0) {
+            console.log(chara.shift());
+            //chara.shift();
         }
+        var sentence = "";
+        for (var j = 0; j < self.x - self.marginX*2; j++) {
+            var c = getRandomArbitrary(0, chara.length);
+            sentence += chara[c];
+        }
+        self.printChar(i, 0, sentence);
+    }
 
-        // txt.forEach(function(sentence, line) {
-        //     self.printChar(line, 0, sentence);
-        // });
+    // txt.forEach(function(sentence, line) {
+    //     self.printChar(line, 0, sentence);
+    // });
 
     //}, 100);
 
@@ -486,7 +517,7 @@ Box.prototype.menu = function() {
                     one = false;
                 }
                 else if (two) {
-                    line.innerHTML += "<a class='ep'>"+i+"</a>│";
+                    line.innerHTML += "<a class='ep' id='"+ i+ "'>"+i+"</a>│";
                     two = false;
                 }
                 else {
