@@ -19,12 +19,15 @@ function Box() {
 
 
 }
-Box.prototype.init = function(opt) {
+Box.prototype.init = function(opt, content) {
 
     this.marginX = opt.marginX || 0;
     this.marginY = opt.marginY || 0;
     this.div = opt.divName;
 
+    if (content) {
+        this.content = content;
+    }
     // Define the box dimension
     this.getPageDimension();
 
@@ -59,7 +62,6 @@ Box.prototype.getPageDimension = function() {
         var h = test.offsetHeight;
 
         test.parentNode.removeChild(test);
-        console.log(w);
         return {"w" : w, "h" : h};
     }
 
@@ -293,7 +295,6 @@ Box.prototype.reDraw = function(callback) {
     }
 
     var self = this;
-
     var draw = setInterval(function() {
         if(self.ps.length != self.y) {
             if (self.ps.length < self.y) {
@@ -440,11 +441,12 @@ Box.prototype.removeTags = function() {
 
     this.ps.forEach(function(p) {
         if (p.children) {
-            for (var i = 0; i < p.children.length; i++) {
+            var l = p.children.length;
+            for (var i = 0; i < l; i++) {
                 var index = p.innerHTML.indexOf("<");
-                var txt = p.children[i].innerHTML;
+                var txt = p.children[0].innerHTML;
+                p.removeChild(p.children[0]);
 
-                p.removeChild(p.children[i]);
                 p.innerHTML = p.innerHTML.substr(0, index) + txt + p.innerHTML.substr(index);
             }
         }
@@ -499,32 +501,34 @@ Box.prototype.fillScreen = function() {
 
     //}, 100);
 
-}
+};
 Box.prototype.menu = function() {
     var self = this;
     var div = document.getElementById(this.div);
 
     var pos = 1;
     for (var i = 0; i <= this.episodes; i++) {
-        let one = two = true;
         this.ps.forEach(function(line, index) {
-            if (index < pos) {
-                line.innerHTML += " ".repeat(2);
+            if (index < pos) line.innerHTML += " ".repeat(2);
+            else if (index-pos == 0) line.innerHTML += "─┐";
+
+            else if (i == 0) {
+                    if (index-pos == 1) {
+                        line.innerHTML += "<a class='ep' id='"+i+"'>"+i+"</a>│";
+                    }
+                    else line.innerHTML += " │";
             }
             else {
-                if (one) {
-                    line.innerHTML += "─┐";
-                    one = false;
-                }
-                else if (two) {
-                    line.innerHTML += "<a class='ep' id='"+ i+ "'>"+i+"</a>│";
-                    two = false;
-                }
-                else {
-                    line.innerHTML += " │";
-                }
-
+                    if (index-pos == 1) line.innerHTML += i+"│";
+                    else if (index-pos == 4) {
+                        line.innerHTML += "<a class='ep' id='"+i+"a'>a</a>│";
+                    }
+                    else if (index-pos == 6) {
+                        line.innerHTML += "<a class='ep' id='"+i+"b'>b</a>│";
+                    }
+                    else line.innerHTML += " │";
             }
+
         });
         var elem = document.createElement("p");
         elem.innerHTML = " ".repeat(pos*2) + "└" + "─".repeat(this.x-2) + "┘";
@@ -536,4 +540,4 @@ Box.prototype.menu = function() {
     }
 
 
-}
+};

@@ -15,8 +15,8 @@ ModifyJSON.prototype.init = function(obj, jsonObj, box) {
     if (obj.onTheBox) this.onTheBox = true;
 
     if (Array.isArray(obj.txt)) {
-        if (obj.interaction == "mousewheel") {
-            this.txt = this.combineSentences(obj.txt, box);
+        if (obj.format == "combine") {
+            this.txt = this.combineSentences(obj.txt, box, obj.pause);
         }
         else {
             this.txt = this.centerSentences(obj.txt, obj.charToAdd, box, jsonObj);
@@ -100,7 +100,7 @@ ModifyJSON.prototype.centerSentences = function(txt, char, box, jsonObj) {
 
     return sentences;
 };
-ModifyJSON.prototype.combineSentences = function(txts, box) {
+ModifyJSON.prototype.combineSentences = function(txts, box, pause) {
     var self = this;
 
     var sentences = [];
@@ -118,6 +118,7 @@ ModifyJSON.prototype.combineSentences = function(txts, box) {
         while (txt.indexOf("<") != -1) {
             var startIndex = txt.indexOf("<");
             var endIndex = txt.indexOf(">");
+
             var tag = parseInt(txt.substring(startIndex+2, endIndex));
             starters[tag] = [txtIndex, startIndex+t.length];
 
@@ -129,11 +130,15 @@ ModifyJSON.prototype.combineSentences = function(txts, box) {
     });
 
     sentences.forEach(function(sentence, i) {
-        sentence = sentence.substr(0,starters[i][1]) + "<t"+i+">" + sentence.substr(starters[i][1]);
+        if (i == pause) {
+            sentence = sentence.substr(0,starters[i][1]) +"<p><t"+i+">" + sentence.substr(starters[i][1]);
+        }
+        else {
+            sentence = sentence.substr(0,starters[i][1]) + "<t"+i+">" + sentence.substr(starters[i][1]);
+        }
         sentences[i] = self.defineSentences(sentence, box.x-box.marginX*2);
     });
 
-    console.log(sentences);
     return sentences;
 };
 ModifyJSON.prototype.defineSentences = function(txt, x, jsonObj) {
@@ -452,7 +457,7 @@ Animation.prototype.appendText = function(callback) {
         callback();
     }
 };
-Animation.prototype.addWord = function(eventlistener, callback) {
+Animation.prototype.addWord = function(removeListeners, callback) {
     var self = this;
 
     this.txt.forEach(function(txts, i) {
@@ -461,46 +466,22 @@ Animation.prototype.addWord = function(eventlistener, callback) {
          });
     });
 
-    console.log(this.txt);
     var n = l = i = index = 0;
     var end = false;
     var check = false;
+    // use pause tag to define an line/index from where you can't go back
+    var pointOfNoReturn = self.pause[0][0];
+    console.log(pointOfNoReturn);
 
     var lastEnding = [];
-    console.log(eventlistener);
-    /*////////////////////////////////////////////////////////
-    function MouseWheelHandler(e) {
-    	// cross-browser wheel delta
-    	var e = window.event || e; // old IE support
-    	var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
-        e.preventDefault();
-        if (delta == 1) {
-            add();
-        }
-        else {
-            remove();
-        }
 
-    	return false;
-    }
-    /////////////////////////////////////////////////////////
-    if (window.addEventListener) {
-        // IE9, Chrome, Safari, Opera
-        window.addEventListener("mousewheel", function(e){MouseWheelHandler(e)}, false);
-        // Firefox
-        window.addEventListener("DOMMouseScroll", function(e){MouseWheelHandler(e)}, false);
-    }
-    // IE 6/7/8
-    else window.attachEvent("onmousewheel", function(e){MouseWheelHandler(e)});
-    /*////////////////////////////////////////////////////////
+    window.addEventListener('remove', remove);
+    window.addEventListener('add', add);
 
-    function rayer(start, ending, oneLine) {
+    function crossOut(start, ending, oneLine) {
 
 
-        var tag = {
-            "type" : "s",
-            "ref": "",
-        };
+        var tag = { "type" : "s" };
 
         if (start[0] == ending[0]) {
             tag.line = start[0];
@@ -537,9 +518,18 @@ Animation.prototype.addWord = function(eventlistener, callback) {
 
         if (nextWord == undefined) {
             if (self.txt[n][l+1] == undefined) {
-                if (!end) {
+                if (!end && self.txt[n+1] != undefined) {
                     end = true;
-                    rayer(self.checkPoint[n+1], [l, index-1]);
+                    crossOut(self.checkPoint[n+1], [l, index-1]);
+                }
+                // removes method's listeners and throws the callback (wich removes the keyboard or mouse listeners) when last text is finished (then eventually throw another callback for next action)
+                else if (n == self.txt.length-1){
+                    window.removeEventListener('remove', remove);
+                    window.removeEventListener('add', add);
+                    removeListeners();
+                    if (callback) {
+                        callback();
+                    }
                 }
                 return;
             }
@@ -553,24 +543,28 @@ Animation.prototype.addWord = function(eventlistener, callback) {
         }
 
         if (end) {
+            // delete line content
             self.box.rebootLine(l);
+            // reprint line as it was without the <s> tag
             self.box.printChar(l, 0, self.txt[n][l].slice(0,i).join(" "));
+            // print the next word
             self.box.printChar(l, index, nextWord);
             index += nextWord.length + 1;
             i++;
-            if (index < self.box.x - self.box.marginX*2+3) {
+            //if (index-1 <= self.box.x - self.box.marginX*2) {
+            // if line is the first line of the next text, only cross out previous text
                 if (l == self.checkPoint[n+1][0] && index >= self.checkPoint[n+1][1]) {
-                    rayer(self.checkPoint[n+1], [l,index-1]);
+                    crossOut(self.checkPoint[n+1], [l,index-1]);
                 }
                 else {
-                    if (l == self.checkPoint[n+1][0] && index == self.checkPoint[n+1][1]) {
-                    }
-                    else {
-                        rayer([l,0], [l,index-1]);
-                    }
+                    // if (l == self.checkPoint[n+1][0] && index == self.checkPoint[n+1][1]) {
+                    //     console.log("finito ?");
+                    // }
+                    // else {
+                        crossOut([l,0], [l,index-1]);
+                    //}
                 }
-            }
-
+            //}
         }
         else {
             self.box.printChar(l, index, nextWord);
@@ -581,6 +575,9 @@ Animation.prototype.addWord = function(eventlistener, callback) {
     }
 
     function remove() {
+        if (l == pointOfNoReturn[0] && index < pointOfNoReturn[1]+1) {
+            return;
+        }
 
         var lastWord = self.txt[n][l][i-1];
         if (lastWord == undefined) {
@@ -610,14 +607,14 @@ Animation.prototype.addWord = function(eventlistener, callback) {
             self.box.printChar(l, index, space);
             if (index > 0) {
                 if (l == self.checkPoint[n+1][0] && index > self.checkPoint[n+1][1]) {
-                    rayer(self.checkPoint[n+1], [l,index-1]);
+                    crossOut(self.checkPoint[n+1], [l,index-1]);
                 }
                 else {
                     if (l == self.checkPoint[n+1][0] && index == self.checkPoint[n+1][1]) {
                         console.log("yep");
                     }
                     else {
-                        rayer([l,0], [l,index-1]);
+                        crossOut([l,0], [l,index-1]);
                     }
                 }
             }
@@ -637,7 +634,6 @@ Animation.prototype.addWord = function(eventlistener, callback) {
         }
 
     }
-    eventlistener(self);
 
 
 };
