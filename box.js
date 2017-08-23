@@ -163,6 +163,7 @@ Box.prototype.formatTxt = function(txt) {
         else if (dontEscape.indexOf(word) != -1) {
             var lastword = array[i-1];
             index = lastword.length + 1 + word.length;
+            line++;
         }
         else {
             line++;
@@ -175,6 +176,7 @@ Box.prototype.formatTxt = function(txt) {
         }
 
     });
+    console.log(line+1);
 
     return line++;
 
@@ -386,17 +388,14 @@ Box.prototype.cleanBox = function(callback) {
     var self = this;
 
     cleanedLine = "";
-    for (let a = 0; a < self.x-2; a++) {
-        cleanedLine += " ";
+    if (!String.prototype.repeat) {
+        for (let a = 0; a < self.x-2; a++) cleanedLine += " ";
     }
+    else cleanedLine = " ".repeat(self.x-2);
 
-    self.ps.forEach(function(line, i, array) {
-        if (i > self.marginY && i < self.ps.length-self.marginY-1) {
-            let str = line.innerHTML;
-            let start = str.indexOf("│");
-            let end = str.lastIndexOf("│");
-
-            line.innerHTML =  str[start] + cleanedLine + str.substr(end);
+    self.ps.forEach(function(line, i) {
+        if (i >= self.marginY && i < self.ps.length-self.marginY) {
+            line.innerHTML = "│" + cleanedLine + "│";
         }
     });
 
@@ -407,8 +406,9 @@ Box.prototype.cleanBox = function(callback) {
 };
 Box.prototype.rebootLine = function(line) {
     var space = "";
-    if (!String.prototype.repeat)
-    for (var a = 0; a < this.x-2; a++) space += " ";
+    if (!String.prototype.repeat) {
+        for (let a = 0; a < this.x-2; a++) space += " ";
+    }
     else space = " ".repeat(this.x-2);
 
     let str = this.ps[line+this.marginY].innerHTML;
