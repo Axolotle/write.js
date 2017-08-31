@@ -16,6 +16,8 @@ function Box() {
     this.x = 0;
     this.y = 0;
     this.ps = [];
+    this.error = false;
+
 
 
 }
@@ -115,6 +117,8 @@ Box.prototype.getBoxSizeFromText = function(longestText, sizeOfLongestWord, idea
     function getDim(txt) {
         var y = self.formatTxt(txt);
         if (y + self.marginY*2 > self.maxH && self.x > self.maxW) {
+            self.drawError();
+
             return console.log("SCREEN TO SMALL");
         } else if (y + self.marginY*2 > self.maxH) {
             self.x++;
@@ -176,7 +180,6 @@ Box.prototype.formatTxt = function(txt) {
         }
 
     });
-    console.log(line+1);
 
     return line++;
 
@@ -292,7 +295,7 @@ Box.prototype.reDraw = function(callback) {
         while (div.hasChildNodes()) {
             div.removeChild(div.lastChild);
         }
-        this.drawError();
+        //this.drawError();
         return;
     }
 
@@ -352,11 +355,19 @@ Box.prototype.reDraw = function(callback) {
     }, 10);
 };
 Box.prototype.drawError = function() {
-    var div = document.getElementById(this.div);
-
+    var bod = document.getElementById("center");
+    this.error = true;
+    var div  = document.createElement("div");
+    div.className += "error";
+    bod.appendChild(div);
+1
     var elem = document.createElement("p");
-    one.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
+    elem.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
     div.appendChild(elem);
+
+    setTimeout(function() {
+        bod.removeChild(div);
+    }, 2000);
 
 };
 Box.prototype.resetBox = function(callback) {
@@ -374,7 +385,10 @@ Box.prototype.resetBox = function(callback) {
             self.ps.pop();
 
             self.ps.forEach(function(line, i, array) {
-                line.innerHTML = line.innerHTML.substr(0, line.innerHTML.length-2);
+                if (line.innerHTML.length > self.x) {
+                    line.innerHTML = line.innerHTML.substr(0, line.innerHTML.length-2);
+                }
+
             });
             await sleep(10);
         }
@@ -455,7 +469,6 @@ Box.prototype.removeTags = function() {
 
 
 Box.prototype.fillScreen = function() {
-    console.log(this.x, this.y);
     var self = this;
 
     var chara = [
@@ -479,12 +492,10 @@ Box.prototype.fillScreen = function() {
 
 
 
-    console.log("lol");
     //var fill = setInterval(function() {
     //txt = [];
     for (var i = 0; i < self.y -self.marginY*2; i++) {
         if (i % 5 == 0) {
-            console.log(chara.shift());
             //chara.shift();
         }
         var sentence = "";
@@ -500,44 +511,5 @@ Box.prototype.fillScreen = function() {
     // });
 
     //}, 100);
-
-};
-Box.prototype.menu = function() {
-    var self = this;
-    var div = document.getElementById(this.div);
-
-    var pos = 1;
-    for (var i = 0; i <= this.episodes; i++) {
-        this.ps.forEach(function(line, index) {
-            if (index < pos) line.innerHTML += " ".repeat(2);
-            else if (index-pos == 0) line.innerHTML += "─┐";
-
-            else if (i == 0) {
-                    if (index-pos == 1) {
-                        line.innerHTML += "<a class='ep' id='"+i+"'>"+i+"</a>│";
-                    }
-                    else line.innerHTML += " │";
-            }
-            else {
-                    if (index-pos == 1) line.innerHTML += i+"│";
-                    else if (index-pos == 4) {
-                        line.innerHTML += "<a class='ep' id='"+i+"a'>a</a>│";
-                    }
-                    else if (index-pos == 6) {
-                        line.innerHTML += "<a class='ep' id='"+i+"b'>b</a>│";
-                    }
-                    else line.innerHTML += " │";
-            }
-
-        });
-        var elem = document.createElement("p");
-        elem.innerHTML = " ".repeat(pos*2) + "└" + "─".repeat(this.x-2) + "┘";
-
-        div.appendChild(elem);
-
-        this.ps.push(elem);
-        pos++;
-    }
-
 
 };
