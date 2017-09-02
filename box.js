@@ -21,15 +21,12 @@ function Box() {
 
 
 }
-Box.prototype.init = function(opt, content) {
+Box.prototype.init = function(opt) {
 
     this.marginX = opt.marginX || 0;
     this.marginY = opt.marginY || 0;
     this.div = opt.divName;
 
-    if (content) {
-        this.content = content;
-    }
     // Define the box dimension
     this.getPageDimension();
 

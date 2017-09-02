@@ -18,6 +18,9 @@ ModifyJSON.prototype.init = function(obj, jsonObj, box) {
         if (obj.format == "combine") {
             this.txt = this.combineSentences(obj.txt, box, obj.pause);
         }
+        else if (obj.format == "subtitle") {
+            this.txt = this.subThis(obj.txt, box);
+        }
         else {
             this.txt = this.centerSentences(obj.txt, obj.charToAdd, box, jsonObj);
         }
@@ -311,6 +314,73 @@ ModifyJSON.prototype.wordsArrayToStringArray = function(wordsArray) {
     return sentences;
 
 };
+ModifyJSON.prototype.subThis = function(input, box) {
+
+    var self = this;
+    this.startAt = [];
+    this.endAt = [];
+
+    function convertToMillisecond(srtString) {
+        var splittedStr = srtString.split(":").reverse();
+        var multi = 1000;
+
+        var ms = splittedStr.reduce(function(a,b) {
+            if (typeof a == "string" && a.indexOf(".") > -1) {
+                a = parseFloat(a)*multi;
+            }
+            b = parseInt(b);
+            multi *= 60;
+
+            return a + b*multi;
+        });
+
+        return ms;
+    }
+
+    function centerLine(txt, length) {
+        function genSpaces(n) {
+            let space = "";
+            if (!String.prototype.repeat)
+                for (let a = 0; a < n; a++) space += " ";
+            else space = " ".repeat(n);
+            return space
+        }
+
+        var toAdd = length - txt.length;
+        var sentence = "";
+        sentence += genSpaces(Math.ceil(toAdd/2));
+        sentence += txt;
+        sentence += genSpaces(Math.floor(toAdd/2));
+
+        return sentence;
+    }
+
+    var txts = []
+
+    input.forEach(function(subtitle) {
+        var timing = subtitle[0];
+        var txt = subtitle[1];
+        self.startAt.push(convertToMillisecond(timing[0]));
+        self.endAt.push(convertToMillisecond(timing[1]));
+
+        if (txt.length > 1) {
+            if (txt[0].length > txt[1].length) {
+                if (!txt[1].startsWith("-")) {
+                    txt[1] = centerLine(txt[1], txt[0].length);
+                }
+            }
+            else {
+                if (!txt[0].startsWith("-")) {
+                    txt[0] = centerLine(txt[0], txt[1].length);
+                }
+            }
+        }
+        txts.push(txt)
+    });
+
+    return txts;
+
+};
 
 
 
@@ -330,6 +400,7 @@ Animation.prototype.init = function(obj, box) {
     if (obj.onTheBox) this.onTheBox = true;
     if (obj.tags) this.tags = obj.tags;
     if (obj.checkPoint) this.checkPoint = obj.checkPoint;
+    if (obj.endAt) this.endAt = obj.endAt;
 
     this.startAt = obj.startAt;
     this.altSpeed = obj.altSpeed || [];
@@ -756,4 +827,57 @@ Animation.prototype.reversedClean = function(pos, callback) {
 
     }, self.cleanSpeed);
 
+};
+Animation.prototype.startSubtitles = function(callback) {
+
+    var self = this;
+    var start = null;
+    var n = 0;
+
+    var l = 31;
+
+    function getPos(n) {
+        let pos = Math.floor(self.box.x/2) - Math.floor(self.txt[n][0].length/2);
+
+        return pos;
+    }
+
+
+    function sub(timestamp) {
+        if (start === null) start = timestamp;
+        var progress = timestamp - start;
+
+        if (n-1 >= 0 && progress >= self.endAt[n-1]) {
+            var x = getPos(n-1);
+            if (self.txt[n-1].length == 2) {
+                self.box.printChar(l-1, x, " ".repeat(self.txt[n-1][0].length));
+                self.box.printChar(l, x, " ".repeat(self.txt[n-1][0].length));
+            }
+            else {
+                self.box.printChar(l, x, " ".repeat(self.txt[n-1][0].length));
+            }
+        }
+
+        if (progress >= self.startAt[n]) {
+            var x = getPos(n);
+            if (self.txt[n].length == 2) {
+                self.box.printChar(l-1, x, self.txt[n][0]);
+                self.box.printChar(l, x, self.txt[n][1]);
+            }
+            else {
+                self.box.printChar(l, x, self.txt[n][0]);
+            }
+
+            n++;
+        }
+        //console.log(progress);
+        if (n < self.txt.length) {
+            requestAnimationFrame(sub);
+        }
+        else {
+            callback();
+        }
+    }
+
+    requestAnimationFrame(sub);
 };
