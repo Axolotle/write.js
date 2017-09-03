@@ -337,6 +337,101 @@ ModifyJSON.prototype.subThis = function(input, box) {
         return ms;
     }
 
+    function getPos(length) {
+        return Math.floor(box.x/2 - box.marginX) - Math.floor(length/2);
+    }
+
+    var txts = []
+    var posY = box.y - box.marginY - 3;
+
+    input.forEach(function(subtitle) {
+        var data = {};
+
+        let timing = subtitle[0];
+        let txt = subtitle[1];
+
+        for (var i = 0; i < txt.length; i++) {
+            txt[i] = " "+txt[i]+" ";
+        }
+
+        data.start = convertToMillisecond(timing[0]);
+        data.end = convertToMillisecond(timing[1]);
+
+        data.pos = [];
+        if (txt.length > 1) {
+            let pos1, pos2;
+
+            if (txt[0].length < txt[1].length) {
+                pos2 = getPos(txt[1].length);
+                if (!txt[0].startsWith("-")) {
+                    pos1 = getPos(txt[0].length);
+                }
+                else {
+                    pos1 = pos2;
+                }
+            }
+            else {
+                pos1 = getPos(txt[0].length);
+                if (!txt[0].startsWith("-")) {
+                    pos2 = getPos(txt[1].length);
+                }
+                else {
+                    pos2 = pos1;
+                }
+
+            }
+            data.pos.push([posY-1, pos1], [posY, pos2]);
+        }
+        else {
+            data.pos.push([posY, getPos(txt[0].length)]);
+        }
+        data.txt = txt;
+
+        if (subtitle[2] != undefined) {
+            data.tags = [];
+            console.log(txt);
+            data.pos.forEach(function(posArray, i) {
+                let tag = {};
+                console.log(posArray);
+                tag.type = "span";
+                tag.class = "sub " + subtitle[2];
+                tag.line = posArray[0];
+                tag.open = posArray[1];
+                tag.close = posArray[1] + data.txt[i].length;
+
+                data.tags.push(tag);
+            })
+
+        }
+        txts.push(data);
+    });
+    console.log(txts);
+    return txts;
+
+};
+ModifyJSON.prototype.subThisSave = function(input, box) {
+
+    var self = this;
+    this.startAt = [];
+    this.endAt = [];
+
+    function convertToMillisecond(srtString) {
+        var splittedStr = srtString.split(":").reverse();
+        var multi = 1000;
+
+        var ms = splittedStr.reduce(function(a,b) {
+            if (typeof a == "string" && a.indexOf(".") > -1) {
+                a = parseFloat(a)*multi;
+            }
+            b = parseInt(b);
+            multi *= 60;
+
+            return a + b*multi;
+        });
+
+        return ms;
+    }
+
     function centerLine(txt, length) {
         function genSpaces(n) {
             let space = "";
@@ -381,7 +476,6 @@ ModifyJSON.prototype.subThis = function(input, box) {
     return txts;
 
 };
-
 
 
 
@@ -836,36 +930,27 @@ Animation.prototype.startSubtitles = function(callback) {
 
     var l = 31;
 
-    function getPos(n) {
-        let pos = Math.floor(self.box.x/2) - Math.floor(self.txt[n][0].length/2);
-
-        return pos;
-    }
-
-
     function sub(timestamp) {
         if (start === null) start = timestamp;
         var progress = timestamp - start;
 
-        if (n-1 >= 0 && progress >= self.endAt[n-1]) {
-            var x = getPos(n-1);
-            if (self.txt[n-1].length == 2) {
-                self.box.printChar(l-1, x, " ".repeat(self.txt[n-1][0].length));
-                self.box.printChar(l, x, " ".repeat(self.txt[n-1][0].length));
-            }
-            else {
-                self.box.printChar(l, x, " ".repeat(self.txt[n-1][0].length));
+        if (n-1 >= 0 && progress >= self.txt[n-1].end) {
+            let data = self.txt[n-1];
+            self.box.removeTags();
+            for (var i = 0; i < data.txt.length; i++) {
+                self.box.printChar(data.pos[i][0], data.pos[i][1], " ".repeat(data.txt[i].length));
             }
         }
 
-        if (progress >= self.startAt[n]) {
-            var x = getPos(n);
-            if (self.txt[n].length == 2) {
-                self.box.printChar(l-1, x, self.txt[n][0]);
-                self.box.printChar(l, x, self.txt[n][1]);
-            }
-            else {
-                self.box.printChar(l, x, self.txt[n][0]);
+        if (progress >= self.txt[n].start) {
+            let data = self.txt[n];
+
+            for (var i = 0; i < data.txt.length; i++) {
+                self.box.printChar(data.pos[i][0], data.pos[i][1], data.txt[i]);
+                if (data.tags != undefined) {
+                    self.box.addTags(data.tags[i]);
+                }
+
             }
 
             n++;

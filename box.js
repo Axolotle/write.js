@@ -439,10 +439,18 @@ Box.prototype.printChar = function(line, index, char) {
 };
 Box.prototype.addTags = function(tag) {
     function setTagAt(str, openI, closeI, openTag, closeTag) {
+        console.log(str.substring(0,openI) + openTag + str.substring(openI, closeI) + closeTag + str.substr(closeI));
         return str.substring(0,openI) + openTag + str.substring(openI, closeI) + closeTag + str.substr(closeI);
     }
 
-    var opening = "<" + tag.type + " " + tag.ref + ">";
+    var opening = "<" + tag.type
+    if (tag.class) {
+        opening += " class='" + tag.class + "'";
+    }
+    if (tag.ref) {
+        opening += " " + tag.ref;
+    }
+    opening += ">";
     var closing = "</" + tag.type + ">";
 
     var str = this.ps[tag.line+this.marginY].innerHTML;
