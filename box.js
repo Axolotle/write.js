@@ -439,7 +439,6 @@ Box.prototype.printChar = function(line, index, char) {
 };
 Box.prototype.addTags = function(tag) {
     function setTagAt(str, openI, closeI, openTag, closeTag) {
-        console.log(str.substring(0,openI) + openTag + str.substring(openI, closeI) + closeTag + str.substr(closeI));
         return str.substring(0,openI) + openTag + str.substring(openI, closeI) + closeTag + str.substr(closeI);
     }
 

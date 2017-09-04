@@ -337,18 +337,24 @@ ModifyJSON.prototype.subThis = function(input, box) {
         return ms;
     }
 
-    function getPos(length) {
-        return Math.floor(box.x/2 - box.marginX) - Math.floor(length/2);
+    function getPos(position, lineLength, secondLine) {
+        var posX = Math.floor((box.x-box.marginX*2)*(position[0]/100)) - Math.floor(lineLength/2);
+        var posY = Math.floor((box.y-box.marginY*2-1)*(position[1]/100));
+
+        return [posY, posX];
     }
 
     var txts = []
-    var posY = box.y - box.marginY - 3;
+    //var posY = box.y - box.marginY - 3;
+    //var posX = box.x - box.marginX - 3;
 
     input.forEach(function(subtitle) {
         var data = {};
 
         let timing = subtitle[0];
         let txt = subtitle[1];
+
+        var place = subtitle[3] || [50,100];
 
         for (var i = 0; i < txt.length; i++) {
             txt[i] = " "+txt[i]+" ";
@@ -361,38 +367,60 @@ ModifyJSON.prototype.subThis = function(input, box) {
         if (txt.length > 1) {
             let pos1, pos2;
 
-            if (txt[0].length < txt[1].length) {
-                pos2 = getPos(txt[1].length);
-                if (!txt[0].startsWith("-")) {
-                    pos1 = getPos(txt[0].length);
-                }
-                else {
-                    pos1 = pos2;
-                }
+            pos1 = getPos(place, txt[0].length);
+            pos2 = getPos(place, txt[1].length);
+
+            if (place[1] <= 50) {
+                pos2[0] += 1;
             }
             else {
-                pos1 = getPos(txt[0].length);
-                if (!txt[0].startsWith("-")) {
-                    pos2 = getPos(txt[1].length);
+                pos1[0] -= 1;
+            }
+
+            // correct x position if position is outside the box
+            if (pos1[1] < 0 || pos2[1] < 0) {
+                if (txt[0].length > txt[1].length) {
+                    pos2[1] += pos1[1] * -1;
+                    pos1[1] += pos1[1] * -1;
                 }
                 else {
-                    pos2 = pos1;
+                    pos1[1] += pos2[1] * -1;
+                    pos2[1] += pos2[1] * -1;
+                }
+            }
+            else if (pos1[1]+txt[0].length > box.x-box.marginX*2 || pos2[1]+txt[1].length > box.x-box.marginX*2){
+                let boxW = box.x-box.marginX*2;
+                if (txt[0].length > txt[1].length) {
+                    let adder = boxW - (pos1[1]+txt[0].length);
+                    pos2[1] += adder;
+                    pos1[1] += adder;
+                }
+                else {
+                    let adder = boxW - (pos2[1]+txt[1].length);
+                    pos1[1] += adder;
+                    pos2[1] += adder;
                 }
 
+
             }
-            data.pos.push([posY-1, pos1], [posY, pos2]);
+
+            data.pos.push(pos1, pos2);
         }
         else {
-            data.pos.push([posY, getPos(txt[0].length)]);
+            data.pos.push(getPos(place, txt[0].length));
+
+            if (data.pos[0][1]+txt[0].length > box.x-box.marginX*2) {
+                data.pos[0][1] += (box.x-box.marginX*2) - (data.pos[0][1]+txt[0].length);
+            }
         }
+
+
         data.txt = txt;
 
         if (subtitle[2] != undefined) {
             data.tags = [];
-            console.log(txt);
             data.pos.forEach(function(posArray, i) {
                 let tag = {};
-                console.log(posArray);
                 tag.type = "span";
                 tag.class = "sub " + subtitle[2];
                 tag.line = posArray[0];
@@ -405,77 +433,11 @@ ModifyJSON.prototype.subThis = function(input, box) {
         }
         txts.push(data);
     });
-    console.log(txts);
-    return txts;
-
-};
-ModifyJSON.prototype.subThisSave = function(input, box) {
-
-    var self = this;
-    this.startAt = [];
-    this.endAt = [];
-
-    function convertToMillisecond(srtString) {
-        var splittedStr = srtString.split(":").reverse();
-        var multi = 1000;
-
-        var ms = splittedStr.reduce(function(a,b) {
-            if (typeof a == "string" && a.indexOf(".") > -1) {
-                a = parseFloat(a)*multi;
-            }
-            b = parseInt(b);
-            multi *= 60;
-
-            return a + b*multi;
-        });
-
-        return ms;
-    }
-
-    function centerLine(txt, length) {
-        function genSpaces(n) {
-            let space = "";
-            if (!String.prototype.repeat)
-                for (let a = 0; a < n; a++) space += " ";
-            else space = " ".repeat(n);
-            return space
-        }
-
-        var toAdd = length - txt.length;
-        var sentence = "";
-        sentence += genSpaces(Math.ceil(toAdd/2));
-        sentence += txt;
-        sentence += genSpaces(Math.floor(toAdd/2));
-
-        return sentence;
-    }
-
-    var txts = []
-
-    input.forEach(function(subtitle) {
-        var timing = subtitle[0];
-        var txt = subtitle[1];
-        self.startAt.push(convertToMillisecond(timing[0]));
-        self.endAt.push(convertToMillisecond(timing[1]));
-
-        if (txt.length > 1) {
-            if (txt[0].length > txt[1].length) {
-                if (!txt[1].startsWith("-")) {
-                    txt[1] = centerLine(txt[1], txt[0].length);
-                }
-            }
-            else {
-                if (!txt[0].startsWith("-")) {
-                    txt[0] = centerLine(txt[0], txt[1].length);
-                }
-            }
-        }
-        txts.push(txt)
-    });
 
     return txts;
 
 };
+
 
 
 
@@ -927,8 +889,6 @@ Animation.prototype.startSubtitles = function(callback) {
     var self = this;
     var start = null;
     var n = 0;
-
-    var l = 31;
 
     function sub(timestamp) {
         if (start === null) start = timestamp;
