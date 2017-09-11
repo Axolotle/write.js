@@ -345,8 +345,6 @@ ModifyJSON.prototype.subThis = function(input, box) {
     }
 
     var txts = []
-    //var posY = box.y - box.marginY - 3;
-    //var posX = box.x - box.marginX - 3;
 
     input.forEach(function(subtitle) {
         var data = {};
@@ -360,8 +358,8 @@ ModifyJSON.prototype.subThis = function(input, box) {
             txt[i] = " "+txt[i]+" ";
         }
 
-        data.start = convertToMillisecond(timing[0]);
-        data.end = convertToMillisecond(timing[1]);
+        data.start = typeof timing[0] === "string" ? convertToMillisecond(timing[0]) : timing[0];
+        data.end = typeof timing[1] === "string" ? convertToMillisecond(timing[1]) : timing[1];
 
         data.pos = [];
         if (txt.length > 1) {
@@ -437,7 +435,6 @@ ModifyJSON.prototype.subThis = function(input, box) {
     return txts;
 
 };
-
 
 
 
@@ -888,35 +885,51 @@ Animation.prototype.startSubtitles = function(callback) {
 
     var self = this;
     var start = null;
-    var n = 0;
+
+    var active = [];
+    var removed = false;
 
     function sub(timestamp) {
         if (start === null) start = timestamp;
         var progress = timestamp - start;
 
-        if (n-1 >= 0 && progress >= self.txt[n-1].end) {
-            let data = self.txt[n-1];
-            self.box.removeTags();
-            for (var i = 0; i < data.txt.length; i++) {
-                self.box.printChar(data.pos[i][0], data.pos[i][1], " ".repeat(data.txt[i].length));
+        if (active.length > 0) {
+            for (var i = 0; i < active.length; i++) {
+                if (progress >= active[i].end) {
+                    self.box.removeTags();
+                    for (var a = 0; a < active[i].txt.length; a++) {
+                        self.box.printChar(active[i].pos[a][0], active[i].pos[a][1], " ".repeat(active[i].txt[a].length));
+                    }
+                    active.splice(i, 1);
+                    removed = true;
+                }
             }
         }
 
-        if (progress >= self.txt[n].start) {
-            let data = self.txt[n];
+        if (self.txt[0] != undefined && progress >= self.txt[0].start) {
+            let data = self.txt[0];
+            self.box.removeTags();
 
             for (var i = 0; i < data.txt.length; i++) {
                 self.box.printChar(data.pos[i][0], data.pos[i][1], data.txt[i]);
-                if (data.tags != undefined) {
-                    self.box.addTags(data.tags[i]);
-                }
-
             }
-
-            n++;
+            active.push(self.txt.shift());
+            removed = true;
         }
-        //console.log(progress);
-        if (n < self.txt.length) {
+
+        if (removed) {
+            for (var i = 0; i < active.length; i++) {
+                for (var a = 0; a < active[i].txt.length; a++) {
+                    if (active[i].tags != undefined) {
+                        self.box.addTags(active[i].tags[a]);
+                    }
+                }
+            }
+            removed = false;
+        }
+
+
+        if (self.txt.length > 0 || active.length > 0) {
             requestAnimationFrame(sub);
         }
         else {
