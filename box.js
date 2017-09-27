@@ -19,7 +19,6 @@ function Box() {
     this.error = false;
 
 
-
 }
 Box.prototype.init = function(opt) {
 
@@ -34,38 +33,24 @@ Box.prototype.init = function(opt) {
     if (opt.longestText) {
         this.getBoxSizeFromText(opt.longestText, opt.longestWord, opt.idealX);
     }
+    else if (opt.ratio) {
+        this.getBoxSizeFromRatio(opt.idealY, opt.minY, opt.ratio[0]/opt.ratio[1]);
+    }
     else {
         this.getBoxSizeFromData(opt.idealX, opt.idealY, opt.minX, opt.minY);
     }
 
+    //FIXME shouldn't be in the lib
     if (opt.episodes) {
         this.episodes = opt.episodes;
     }
-
-    //var lines = this.setupBox(this.x, this.y);
-    //this.drawBox(this.x, this.y, options.divName);
 
 };
 Box.prototype.getPageDimension = function() {
     // define the page dimension in number of characters
 
-    function getCharDim() {
-        // Create an span element, return the height and the width of one
-        // character then delete it
-        var test = document.createElement("span");
-        test.style.visibility = "hidden";
-        document.body.appendChild(test);
-        test.innerHTML = "|";
-
-        var w = test.offsetWidth;
-        var h = test.offsetHeight;
-
-        test.parentNode.removeChild(test);
-        return {"w" : w, "h" : h};
-    }
-
     // Get size array of a common character
-    var char = getCharDim();
+    var char = this.getCharacterDim();
 
     var pageW = window.innerWidth;
     var pageH = window.innerHeight;
@@ -76,9 +61,25 @@ Box.prototype.getPageDimension = function() {
     //FIXME side effect function maybe not the best choice
 
 };
+Box.prototype.getCharacterDim = function() {
+    // Create an span element, return the height and the width of one
+    // character then delete it
+    var test = document.createElement("span");
+    test.style.visibility = "hidden";
+    document.body.appendChild(test);
+    test.innerHTML = "|";
+
+    var w = test.offsetWidth;
+    var h = test.offsetHeight;
+
+    test.parentNode.removeChild(test);
+
+    return {"w" : w, "h" : h};
+};
 Box.prototype.getBoxSizeFromData = function(idealX, idealY, minX, minY) {
     var self = this;
 
+    // FIXME dumb stuff, to rework
     function getDim() {
         if (self.x > self.maxW) {
 
@@ -93,8 +94,6 @@ Box.prototype.getBoxSizeFromData = function(idealX, idealY, minX, minY) {
             getDim();
         }
     }
-
-    // Check if window can at least contain the longest word with box margin
     if (this.maxW < minX + this.marginX * 2) {
         console.log("SCREEN TO SMALL - need moar width");
     }
@@ -108,7 +107,39 @@ Box.prototype.getBoxSizeFromData = function(idealX, idealY, minX, minY) {
         getDim();
     }
 
-}
+};
+Box.prototype.getBoxSizeFromRatio = function(idealY, minY, ratio) {
+    var self = this;
+
+    function getDim(idealY, minY, ratio) {
+        var x = Math.round(idealY * ratio);
+
+        if (x > self.maxW && idealY-1 >= minY) {
+            idealY--;
+            getDim(idealY, minY, ratio);
+        }
+        else {
+            self.x = x;
+            self.y = idealY;
+        }
+    }
+
+    if (this.maxH < minY) {
+        this.drawError();
+        console.log("coucou");
+        return;
+    }
+
+    if (idealY > this.maxH) {
+        idealY = this.maxH;
+    }
+
+    var charaSize = this.getCharacterDim();
+    ratio = ratio == 1 ? charaSize.h/charaSize.w : ratio * charaSize.h/charaSize.w;
+
+    getDim(idealY, minY, ratio);
+
+};
 Box.prototype.getBoxSizeFromText = function(longestText, sizeOfLongestWord, idealX) {
     var self = this;
     function getDim(txt) {
@@ -288,13 +319,6 @@ Box.prototype.drawBox = function(callback) {
 };
 Box.prototype.reDraw = function(callback) {
     var div = document.getElementById(this.div);
-    if (this.x == 0 || this.x > this.maxW) {
-        while (div.hasChildNodes()) {
-            div.removeChild(div.lastChild);
-        }
-        //this.drawError();
-        return;
-    }
 
     var self = this;
     var draw = setInterval(function() {
@@ -352,18 +376,24 @@ Box.prototype.reDraw = function(callback) {
     }, 10);
 };
 Box.prototype.drawError = function() {
-    var bod = document.getElementById("center");
+    var div = document.getElementById(this.div);
+
+    while (div.hasChildNodes()) {
+        div.removeChild(div.lastChild);
+    }
+
+    //var bod = document.getElementById("center");
     this.error = true;
-    var div  = document.createElement("div");
-    div.className += "error";
-    bod.appendChild(div);
-1
+    var err  = document.createElement("div");
+    err.className += "error";
+    div.appendChild(err);
+
     var elem = document.createElement("p");
     elem.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
-    div.appendChild(elem);
+    err.appendChild(elem);
 
     setTimeout(function() {
-        bod.removeChild(div);
+        div.removeChild(err);
     }, 2000);
 
 };

@@ -317,8 +317,6 @@ ModifyJSON.prototype.wordsArrayToStringArray = function(wordsArray) {
 ModifyJSON.prototype.subThis = function(input, box) {
 
     var self = this;
-    this.startAt = [];
-    this.endAt = [];
 
     function convertToMillisecond(srtString) {
         var splittedStr = srtString.split(":").reverse();
@@ -344,7 +342,7 @@ ModifyJSON.prototype.subThis = function(input, box) {
         return [posY, posX];
     }
 
-    var txts = []
+    var txts = [];
 
     input.forEach(function(subtitle) {
         var data = {};
