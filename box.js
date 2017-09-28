@@ -25,24 +25,17 @@ Box.prototype.init = function(opt) {
     this.marginY = opt.marginY || 1;
     this.div = opt.divName;
 
-    // Define how many characters we can fit in the user window
     var pageSize = this.getPageDimension();
     this.maxW = pageSize.w;
     this.maxH = pageSize.h;
 
-    if (opt.longestText) {
-        this.getBoxSizeFromText(opt.longestText, opt.longestWord, opt.idealX);
-    }
-    else if (opt.ratio) {
-        this.getBoxSizeFromRatio(opt.idealY, opt.minY, opt.ratio[0]/opt.ratio[1]);
-    }
-    else {
-        this.getBoxSizeFromData(opt.idealX, opt.idealY, opt.minX, opt.minY);
-    }
-
-    //FIXME shouldn't be in the lib
-    if (opt.episodes) {
-        this.episodes = opt.episodes;
+    var boxSize = this.getBoxSize(opt);
+    if (boxSize != null) {
+        this.x = boxSize.x;
+        this.y = boxSize.y;
+    } else {
+        this.drawError();
+        // FIXME deal with errors
     }
 
 };
@@ -75,139 +68,123 @@ Box.prototype.getCharacterDimension = function() {
     return {"w" : w, "h" : h};
 
 };
-Box.prototype.getBoxSizeFromData = function(idealX, idealY, minX, minY) {
-    var self = this;
+Box.prototype.getBoxSize = function (opt) {
+    // Return the box size depending of the options given by the json object
 
-    // FIXME dumb stuff, to rework
-    function getDim() {
-        if (self.x > self.maxW) {
+    var _this = this;
+    var maxX, maxY, minX, minY;
 
-            if (self.x-self.marginX*2 > minX) {
-                self.x--;
-                getDim();
+    if (opt.minX && typeof opt.minX == "string") {
+        // if the minX option is a word or en sentence, get its length
+        minX = opt.minX.length;
+    } else {
+        minX = opt.minX ? opt.minX : this.marginX * 2;
+    }
+    minY = opt.minY ? opt.minY : this.marginY * 2;
+
+    if (this.maxW < minX || this.maxH < minY) {
+        // required minimum size can't be obtained
+        return null;
+    }
+
+    // define min & max from given values and page dimensions
+    maxX = opt.maxX && opt.maxX <= this.maxW ? opt.maxX : this.maxW;
+    maxY = opt.maxY && opt.maxY <= this.maxH ? opt.maxY : this.maxH;
+
+    function fromText(words, x) {
+        // Returns dimensions so a given text can be fully displayed in the
+        // user's window. An ideal x value is required to set the y value.
+
+        var line = 1,
+            index = 0,
+            dontEscape = ["?", "!", ":", ";"];
+
+        // Margins must be substracted from the usable width
+        var y = 1 + _this.marginY * 2;
+        var margins = _this.marginX * 2;
+
+        if (x > maxX) {
+            // Window is probably too small to fit the text
+            return null;
+        }
+
+        wordsLength = words.length;
+        // Simulates text formatting to get the height of the box
+        for (var i = 0; i < wordsLength; i++) {
+            if (y > maxY) {
+                // box is already higher than the window, try with a wider x
+                return fromText(words, ++x);
             }
 
+            let length = words[i].length;
+            let width = index == 0 ? length : index + 1 + length;
+
+            if (words[i].indexOf("\n") > -1) {
+                if (width - "\n".length > x - margins) {
+                    y += 2;
+                }
+                else {
+                    y++;
+                }
+                index = 0;
+            } else if (width <= x - margins) {
+                index += index == 0 ? length : 1 + length;
+            } else if (dontEscape.indexOf(words[i]) > -1) {
+                var lastWord = words[i-1];
+                index = lastWord.length + 1 + length;
+                y++;
+            } else {
+                index = length;
+                y++;
+            }
         }
-        if (self.y > self.maxH && self.y-this.marginY*2 > minY) {
-            self.y--;
-            getDim();
-        }
-    }
-    if (this.maxW < minX + this.marginX * 2) {
-        console.log("SCREEN TO SMALL - need moar width");
-    }
-    else if (this.maxH < minY + this.marginY*2) {
-        console.log("SCREEN TO SMALL - need moar heigth");
-    }
-    // Manage to fit the box in the window
-    else {
-        this.x = idealX + this.marginX*2;
-        this.y = idealY + this.marginY*2;
-        getDim();
+
+        return {"x" : x, "y" : y};
     }
 
-};
-Box.prototype.getBoxSizeFromRatio = function(idealY, minY, ratio) {
-    var self = this;
+    function fromRatio(ratio, y) {
+        // Returns dimensions so that the box is homothetic at a given ratio.
+        var x = Math.round(y * ratio);
 
-    function getDim(idealY, minY, ratio) {
-        var x = Math.round(idealY * ratio);
-
-        if (x > self.maxW && idealY-1 >= minY) {
-            idealY--;
-            getDim(idealY, minY, ratio);
-        }
-        else {
-            self.x = x;
-            self.y = idealY;
-        }
+        if (x <= maxX && x >= minX && y <= maxY && y >= minY){
+            return {"x" : x, "y" : y};
+        } else if (x > maxX && y-1 >= minY) {
+            return fromRatio(ratio, y--);
+        } else return null;
     }
 
-    if (this.maxH < minY) {
-        this.drawError();
-        return;
-    }
-
-    if (idealY > this.maxH) {
-        idealY = this.maxH;
-    }
-
-    var charaSize = this.getCharacterDimension();
-    ratio = ratio == 1 ? charaSize.h/charaSize.w : ratio * (charaSize.h/charaSize.w);
-
-    getDim(idealY, minY, ratio);
-
-};
-Box.prototype.getBoxSizeFromText = function(longestText, sizeOfLongestWord, idealX) {
-    var self = this;
-    function getDim(txt) {
-        var y = self.formatTxt(txt);
-        if (y + self.marginY*2 > self.maxH && self.x > self.maxW) {
-            self.drawError();
-
-            return console.log("SCREEN TO SMALL");
-        } else if (y + self.marginY*2 > self.maxH) {
-            self.x++;
-            return getDim(txt);
-        } else if (self.x > self.maxW) {
-            self.x--;
-            return getDim(txt);
-        }
-        else {
-            return y + self.marginY*2;
+    function fromMinMax(x, y) {
+        // Returns dimensions so that each axis is between the min & max values.
+        if (x <= maxX && x >= minX && y <= maxY && y >= minY){
+            return {"x" : x, "y" : y};
+        } else if (x > maxX && y > maxY) {
+            return fromMinMax(--x, --y);
+        } else if (x > maxX) {
+            return fromMinMax(--x, y);
+        } else if (y > maxY) {
+            return fromMinMax(x, --y);
+        } else {
+            return null;
         }
     }
 
-    // Check if window can at least contain the longest word with box margin
-    if (this.maxW < sizeOfLongestWord + this.marginX * 2) {
+
+    if (opt.longestText) {
+        var words = opt.longestText.split(" ");
+
+        return fromText(words, opt.idealX);
+    } else if (opt.ratio) {
+        // To get a homothetic box, given ratio must be added to the
+        // ratio of the font size.
+        var charaSize = this.getCharacterDimension();
+        var charaRatio = charaSize.h/charaSize.w;
+        var givenRatio = opt.ratio[0]/opt.ratio[1];
+        var ratio = givenRatio * charaRatio;
+
+        return fromRatio(ratio, maxY);
+    } else {
+        return fromMinMax(maxX, maxY);
     }
-    // Manage to fit the box in the window
-    else {
-        this.x = idealX + this.marginX*2;
-        this.y = getDim(longestText);
-    }
-
-}
-Box.prototype.formatTxt = function(txt) {
-
-    var line = 1;
-    var index = 0;
-    var dontEscape = ["?", "!", ":", ";"];
-
-    var splittedTxt = txt.split(" ");
-
-    var self = this;
-    splittedTxt.forEach(function(word, i, array) {
-        var newLine = false;
-
-        var width = index == 0 ? index + word.length : index + 1 + word.length;
-
-        if (word.indexOf("\n") > -1) {
-            word = word.replace('\n', '');
-            newLine = true;
-        }
-
-        if (width <= self.x - self.marginX*2) {
-            index += index == 0 ? word.length : 1 + word.length;
-        }
-        else if (dontEscape.indexOf(word) != -1) {
-            var lastword = array[i-1];
-            index = lastword.length + 1 + word.length;
-            line++;
-        }
-        else {
-            line++;
-            index = word.length;
-        }
-
-        if (newLine) {
-            line++;
-            index = 0;
-        }
-
-    });
-
-    return line++;
 
 };
 Box.prototype.setupBox = function(x,y) {
