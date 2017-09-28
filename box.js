@@ -16,19 +16,19 @@ function Box() {
     this.x = 0;
     this.y = 0;
     this.ps = [];
-    this.error = false;
-
+    this.error = false; //FIXME needed ?
 
 }
 Box.prototype.init = function(opt) {
 
-    this.marginX = opt.marginX || 0;
-    this.marginY = opt.marginY || 0;
+    this.marginX = opt.marginX || 1;
+    this.marginY = opt.marginY || 1;
     this.div = opt.divName;
 
-    // Define the box dimension
-    this.getPageDimension();
-
+    // Define how many characters we can fit in the user window
+    var pageSize = this.getPageDimension();
+    this.maxW = pageSize.w;
+    this.maxH = pageSize.h;
 
     if (opt.longestText) {
         this.getBoxSizeFromText(opt.longestText, opt.longestWord, opt.idealX);
@@ -47,21 +47,19 @@ Box.prototype.init = function(opt) {
 
 };
 Box.prototype.getPageDimension = function() {
-    // define the page dimension in number of characters
+    // return the page dimension in number of characters
 
-    // Get size array of a common character
-    var char = this.getCharacterDim();
+    // Get the size in pixel of a common character
+    var chara = this.getCharacterDimension();
 
-    var pageW = window.innerWidth;
-    var pageH = window.innerHeight;
+    // Define how many characters we can fit inside the window
+    var pageW = Math.floor(window.innerWidth / chara.w);
+    var pageH = Math.floor(window.innerHeight / chara.h);
 
-    // Define how many characters we can fit inside the window (including margins)
-    this.maxW = parseInt(pageW / char.w);
-    this.maxH = parseInt(pageH / char.h);
-    //FIXME side effect function maybe not the best choice
+    return {"w" : pageW, "h" : pageH};
 
 };
-Box.prototype.getCharacterDim = function() {
+Box.prototype.getCharacterDimension = function() {
     // Create an span element, return the height and the width of one
     // character then delete it
     var test = document.createElement("span");
@@ -75,6 +73,7 @@ Box.prototype.getCharacterDim = function() {
     test.parentNode.removeChild(test);
 
     return {"w" : w, "h" : h};
+
 };
 Box.prototype.getBoxSizeFromData = function(idealX, idealY, minX, minY) {
     var self = this;
@@ -89,7 +88,7 @@ Box.prototype.getBoxSizeFromData = function(idealX, idealY, minX, minY) {
             }
 
         }
-        if (self.y > self.maxH && self.y-this.marginy*2 > minY) {
+        if (self.y > self.maxH && self.y-this.marginY*2 > minY) {
             self.y--;
             getDim();
         }
@@ -126,7 +125,6 @@ Box.prototype.getBoxSizeFromRatio = function(idealY, minY, ratio) {
 
     if (this.maxH < minY) {
         this.drawError();
-        console.log("coucou");
         return;
     }
 
@@ -134,8 +132,8 @@ Box.prototype.getBoxSizeFromRatio = function(idealY, minY, ratio) {
         idealY = this.maxH;
     }
 
-    var charaSize = this.getCharacterDim();
-    ratio = ratio == 1 ? charaSize.h/charaSize.w : ratio * charaSize.h/charaSize.w;
+    var charaSize = this.getCharacterDimension();
+    ratio = ratio == 1 ? charaSize.h/charaSize.w : ratio * (charaSize.h/charaSize.w);
 
     getDim(idealY, minY, ratio);
 
@@ -381,7 +379,6 @@ Box.prototype.drawError = function() {
     while (div.hasChildNodes()) {
         div.removeChild(div.lastChild);
     }
-
     //var bod = document.getElementById("center");
     this.error = true;
     var err  = document.createElement("div");
