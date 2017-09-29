@@ -15,7 +15,7 @@ function Box() {
     // Define base information
     this.x = 0;
     this.y = 0;
-    this.ps = [];
+    this.lines = [];
     this.error = false; //FIXME needed ?
 
 }
@@ -24,6 +24,7 @@ Box.prototype.init = function(opt) {
     this.marginX = opt.marginX || 1;
     this.marginY = opt.marginY || 1;
     this.div = opt.divName;
+    this.animDuration = opt.animDuration * 1000 || 1000;
 
     var pageSize = this.getPageDimension();
     this.maxW = pageSize.w;
@@ -40,7 +41,7 @@ Box.prototype.init = function(opt) {
 
 };
 Box.prototype.getPageDimension = function() {
-    // return the page dimension in number of characters
+    /* Returns the page dimension in number of characters */
 
     // Get the size in pixel of a common character
     var chara = this.getCharacterDimension();
@@ -53,8 +54,9 @@ Box.prototype.getPageDimension = function() {
 
 };
 Box.prototype.getCharacterDimension = function() {
-    // Create an span element, return the height and the width of one
-    // character then delete it
+    /* Creates an span element, return the height and the width of one
+       character then delete it */
+
     var test = document.createElement("span");
     test.style.visibility = "hidden";
     document.body.appendChild(test);
@@ -69,27 +71,28 @@ Box.prototype.getCharacterDimension = function() {
 
 };
 Box.prototype.getBoxSize = function (opt) {
-    // Return the box size depending of the options given by the json object
+    /* Returns the box size depending of the options given by the json object */
 
     var _this = this;
     var maxX, maxY, minX, minY;
 
     if (opt.minX && typeof opt.minX == "string") {
-        // if the minX option is a word or en sentence, get its length
+        // If the minX option is a word or en sentence, get its length
         minX = opt.minX.length;
     } else {
-        minX = opt.minX ? opt.minX : this.marginX * 2;
+        minX = opt.minX || this.marginX * 2;
     }
-    minY = opt.minY ? opt.minY : this.marginY * 2;
+    minY = opt.minY || this.marginY * 2;
 
     if (this.maxW < minX || this.maxH < minY) {
-        // required minimum size can't be obtained
+        // Required minimum size can't be obtained
         return null;
     }
 
-    // define min & max from given values and page dimensions
+    // Define min & max from given values and page dimensions
     maxX = opt.maxX && opt.maxX <= this.maxW ? opt.maxX : this.maxW;
     maxY = opt.maxY && opt.maxY <= this.maxH ? opt.maxY : this.maxH;
+
 
     function fromText(words, x) {
         // Returns dimensions so a given text can be fully displayed in the
@@ -112,7 +115,7 @@ Box.prototype.getBoxSize = function (opt) {
         // Simulates text formatting to get the height of the box
         for (var i = 0; i < wordsLength; i++) {
             if (y > maxY) {
-                // box is already higher than the window, try with a wider x
+                // Box is already higher than the window, try with a wider x
                 return fromText(words, ++x);
             }
 
@@ -187,109 +190,118 @@ Box.prototype.getBoxSize = function (opt) {
     }
 
 };
-Box.prototype.setupBox = function(x,y) {
-    // Draw the box and display it on window
+Box.prototype.setupLines = function(x,y) {
+    /* Creates the box lines from dimensions */
 
-    function createLine(c1, c2, c3) {
-        // Create a line of 'x' elements
-
-        var line = c1;
-        for(var i = 0; i < x -2; i++)
-        line += c2;
-        line += c3;
-
-        return line;
-    }
-
-    var ps = [];
+    var lines = [];
 
     for (var n = 0; n < y; n++) {
-        if (n == 0) ps.push(createLine("┌","─","┐"));
-        else if (n == y-1) ps.push(createLine("└","─","┘"));
-        else ps.push(createLine("│"," ","│"));
+        var content;
+        if (n == 0) {
+            content = "┌" + "─".repeat(x - 2) + "┐";
+        } else if (n == y-1) {
+            content = "└" + "─".repeat(x - 2) + "┘";
+        } else {
+            content = "│" + " ".repeat(x - 2) + "│";
+        }
+        lines.push(content);
     }
 
-    return ps;
+    return lines;
 
 };
-Box.prototype.displayBox = function(callback) {
+Box.prototype.display = function(callback) {
+    /* Display the box on window without animation. */
 
-    if (this.x == 0) {
-        this.drawError();
-        return;
-    }
+    // Gets the formated lines with the box characters
+    var boxLines = this.setupLines(this.x, this.y);
 
-    var boxLines = this.setupBox(this.x, this.y);
+    var _this = this;
+    // Creates a document object outside the DOM.
+    var docFragment = document.createDocumentFragment();
 
-    var div = document.getElementById(this.div);
-
-    var self = this;
     boxLines.forEach(function(line) {
         var elem = document.createElement("p");
         elem.innerHTML = line;
-        div.appendChild(elem);
-        self.ps.push(elem);
+        // Also keep the line reference for future use.
+        _this.lines.push(elem);
+        docFragment.appendChild(elem);
     });
+
+    // Appends the fragment to the DOM.
+    var div = document.getElementById(this.div);
+    div.appendChild(docFragment);
 
     if (callback) callback();
 };
-Box.prototype.drawBox = function(callback) {
-
-    if (this.x == 0) {
-        this.drawError();
-        return;
-    }
+Box.prototype.draw = function(callback) {
+    /* Animation of the display of the box from a 2 by 2 size to the needed
+       size in a given time. */
 
     var div = document.getElementById(this.div);
 
+    // Adds the first elements of the box.
     var one = document.createElement("p");
     var two = document.createElement("p");
-
     one.innerHTML = "┌┐";
     two.innerHTML = "└┘";
-
     div.appendChild(one);
     div.appendChild(two);
+    this.lines.push(one, two);
 
-    this.ps.push(one, two);
+    var _this = this;
+    var start = null;
 
-    var self = this;
-    var draw = setInterval(function() {
-        if (self.ps.length < self.y) {
+    // Defines how many steps is needed to draw the box in a given time.
+    var stepX = this.animDuration / (this.x - 2);
+    var stepY = this.animDuration / (this.y - 2);
+    var actualX = 0;
+    var actualY = 0;
 
-            var elem = document.createElement("p");
+    function draw(timeStamp) {
+        if (start === null) start = timeStamp;
+        var progress = timeStamp - start;
 
-            var content = "│";
-            for (var i = 0; i < self.ps[0].innerHTML.length-2; i++) {
-                content += " ";
+        // Defines how many lines we should add to the box for this frame.
+        var xToAdd = Math.floor((progress / stepX) - actualX);
+        var yToAdd = Math.floor((progress / stepY) - actualY);
+
+        if (xToAdd > 0) {
+            actualX += xToAdd;
+            var l = _this.lines.length;
+            // Rewrites the lines with the new length.
+            for (var x = 0; x < l; x++) {
+                if (x == 0) {
+                    _this.lines[x].innerHTML = "┌" + "─".repeat(actualX) + "┐";
+                } else if (x == l-1) {
+                    _this.lines[x].innerHTML = "└" + "─".repeat(actualX) + "┘";
+                } else {
+                    _this.lines[x].innerHTML = "│" + " ".repeat(actualX) + "│";
+                }
             }
-            content += "│";
+        }
+        if (yToAdd > 0) {
+            actualY += yToAdd;
+            var l = _this.lines.length;
+            // Inserts new nodes and inserts characters.
+            for (var y = 0; y < yToAdd; y++) {
+                var elem = document.createElement("p");
+                elem.innerHTML = "│" + " ".repeat(actualX) + "│";
+                div.insertBefore(elem, div.lastChild)
+                // also keeps a reference to the element for future use.
+                _this.lines.splice(l-1, 0, elem);
+            }
+        }
 
-            elem.innerHTML = content;
-            div.insertBefore(elem, div.lastChild);
-            self.ps.splice(self.ps.length-1, 0, elem);
+        if (progress < _this.animDuration) {
+            requestAnimationFrame(draw);
         }
         else {
-            self.ps.forEach(function(ps, i) {
-                var str = ps.innerHTML;
-                if (i == 0 || i == self.ps.length-1) {
-                    ps.innerHTML = str.substr(0,1) + "─" + str.substr(1);
-                }
-                else {
-                    ps.innerHTML = str.substr(0,1) + " " + str.substr(1);
-                }
-            });
-        }
-        if (self.ps.length == self.y && self.ps[0].innerHTML.length == self.x) {
-            clearInterval(draw);
-            self.ps.forEach(function(ps) {
-                ps.innerHTML += "";
-            });
             if (callback) callback();
-
         }
+    }
 
-    }, 10);
+    requestAnimationFrame(draw);
 
 };
 Box.prototype.reDraw = function(callback) {
@@ -297,31 +309,31 @@ Box.prototype.reDraw = function(callback) {
 
     var self = this;
     var draw = setInterval(function() {
-        if(self.ps.length != self.y) {
-            if (self.ps.length < self.y) {
+        if(self.lines.length != self.y) {
+            if (self.lines.length < self.y) {
 
                 var elem = document.createElement("p");
 
                 var content = "│";
-                for (var i = 0; i < self.ps[0].innerHTML.length-2; i++) {
+                for (var i = 0; i < self.lines[0].innerHTML.length-2; i++) {
                     content += " ";
                 }
                 content += "│";
 
                 elem.innerHTML = content;
                 div.insertBefore(elem, div.lastChild);
-                self.ps.splice(self.ps.length-1, 0, elem);
+                self.lines.splice(self.lines.length-1, 0, elem);
             }
             else {
-                self.ps.splice(self.ps.length-2, 1);
+                self.lines.splice(self.lines.length-2, 1);
                 div.removeChild(div.childNodes[div.childNodes.length-2]);
             }
         }
-        else if (self.ps[0].innerHTML.length != self.x) {
-            if (self.ps[0].innerHTML.length < self.x) {
-                self.ps.forEach(function(ps, i) {
+        else if (self.lines[0].innerHTML.length != self.x) {
+            if (self.lines[0].innerHTML.length < self.x) {
+                self.lines.forEach(function(ps, i) {
                     var str = ps.innerHTML;
-                    if (i == 0 || i == self.ps.length-1) {
+                    if (i == 0 || i == self.lines.length-1) {
                         ps.innerHTML = str.substr(0,1) + "─" + str.substr(1);
                     }
                     else {
@@ -330,7 +342,7 @@ Box.prototype.reDraw = function(callback) {
                 });
             }
             else {
-                self.ps.forEach(function(ps, i) {
+                self.lines.forEach(function(ps, i) {
                     var str = ps.innerHTML;
 
                     ps.innerHTML = str.substr(0,1) + str.substr(2);
@@ -341,7 +353,7 @@ Box.prototype.reDraw = function(callback) {
 
         else  {
             clearInterval(draw);
-            // self.ps.forEach(function(span) {
+            // self.lines.forEach(function(span) {
             //     ps.innerHTML += "</br>";
             // });
             if (callback) callback();
@@ -381,11 +393,11 @@ Box.prototype.resetBox = function(callback) {
     async function removeRow() {
         var div = document.getElementById(self.div);
 
-        while (self.ps.length > self.y) {
+        while (self.lines.length > self.y) {
             div.removeChild(div.lastChild);
-            self.ps.pop();
+            self.lines.pop();
 
-            self.ps.forEach(function(line, i, array) {
+            self.lines.forEach(function(line, i, array) {
                 if (line.innerHTML.length > self.x) {
                     line.innerHTML = line.innerHTML.substr(0, line.innerHTML.length-2);
                 }
@@ -408,8 +420,8 @@ Box.prototype.cleanBox = function(callback) {
     }
     else cleanedLine = " ".repeat(self.x-2);
 
-    self.ps.forEach(function(line, i) {
-        if (i >= self.marginY && i < self.ps.length-self.marginY) {
+    self.lines.forEach(function(line, i) {
+        if (i >= self.marginY && i < self.lines.length-self.marginY) {
             line.innerHTML = "│" + cleanedLine + "│";
         }
     });
@@ -426,11 +438,11 @@ Box.prototype.rebootLine = function(line) {
     }
     else space = " ".repeat(this.x-2);
 
-    let str = this.ps[line+this.marginY].innerHTML;
+    let str = this.lines[line+this.marginY].innerHTML;
     let start = str.indexOf("│");
     let end = str.lastIndexOf("│");
 
-    this.ps[line+this.marginY].innerHTML =  str[start] + space + str.substr(end);
+    this.lines[line+this.marginY].innerHTML =  str[start] + space + str.substr(end);
 
 };
 Box.prototype.printChar = function(line, index, char) {
@@ -438,8 +450,8 @@ Box.prototype.printChar = function(line, index, char) {
         return str.substr(0,i) + chr + str.substr(i+chr.length);
     }
 
-    var str = this.ps[line+this.marginY].innerHTML;
-    this.ps[line+this.marginY].innerHTML = setCharAt(str, index+this.marginX, char);
+    var str = this.lines[line+this.marginY].innerHTML;
+    this.lines[line+this.marginY].innerHTML = setCharAt(str, index+this.marginX, char);
 };
 Box.prototype.addTags = function(tag) {
     function setTagAt(str, openI, closeI, openTag, closeTag) {
@@ -456,12 +468,12 @@ Box.prototype.addTags = function(tag) {
     opening += ">";
     var closing = "</" + tag.type + ">";
 
-    var str = this.ps[tag.line+this.marginY].innerHTML;
-    this.ps[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
+    var str = this.lines[tag.line+this.marginY].innerHTML;
+    this.lines[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
 };
 Box.prototype.removeTags = function() {
 
-    this.ps.forEach(function(p) {
+    this.lines.forEach(function(p) {
         if (p.children) {
             var l = p.children.length;
             for (var i = 0; i < l; i++) {
