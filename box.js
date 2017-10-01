@@ -24,7 +24,7 @@ Box.prototype.init = function(opt) {
     this.marginX = opt.marginX || 1;
     this.marginY = opt.marginY || 1;
     this.div = opt.divName;
-    this.animDuration = opt.animDuration * 1000 || 1000;
+    this.animDuration = opt.animDuration * 1000 || 300;
 
     var pageSize = this.getPageDimension();
     this.maxW = pageSize.w;
@@ -282,14 +282,14 @@ Box.prototype.draw = function(callback) {
         }
         if (yToAdd > 0) {
             actualY += yToAdd;
-            var l = _this.lines.length;
+            var l = _this.lines.length - 1;
             // Inserts new nodes and inserts characters.
             for (var y = 0; y < yToAdd; y++) {
                 var elem = document.createElement("p");
                 elem.innerHTML = "│" + " ".repeat(actualX) + "│";
                 div.insertBefore(elem, div.lastChild)
                 // also keeps a reference to the element for future use.
-                _this.lines.splice(l-1, 0, elem);
+                _this.lines.splice(l + y, 0, elem);
             }
         }
 
