@@ -235,62 +235,93 @@ Box.prototype.display = function(callback) {
     if (callback) callback();
 };
 Box.prototype.draw = function(callback) {
-    /* Animation of the display of the box from a 2 by 2 size to the needed
-       size in a given time. */
+    /* Animation of the display of the box from previous size or scratch
+       to the needed size in a given time. */
 
     var div = document.getElementById(this.div);
-
-    // Adds the first elements of the box.
-    var one = document.createElement("p");
-    var two = document.createElement("p");
-    one.innerHTML = "┌┐";
-    two.innerHTML = "└┘";
-    div.appendChild(one);
-    div.appendChild(two);
-    this.lines.push(one, two);
-
     var _this = this;
     var start = null;
 
-    // Defines how many steps is needed to draw the box in a given time.
-    var stepX = this.animDuration / (this.x - 2);
-    var stepY = this.animDuration / (this.y - 2);
-    var actualX = 0;
-    var actualY = 0;
+    var x = this.x;
+    var y = this.y;
+
+    var oldX, oldY;
+    if (this.lines[0] == undefined) {
+        var one = document.createElement("p");
+        var two = document.createElement("p");
+        one.innerHTML = "┌┐";
+        two.innerHTML = "└┘";
+        div.appendChild(one);
+        div.appendChild(two);
+        this.lines.push(one, two);
+        oldX = oldY = 2;
+    } else {
+        oldX = this.lines[0].innerHTML.length;
+        oldY = this.lines.length;
+    }
+
+    var actualX = oldX;
+    var actualY = oldY;
+    var xFrame = this.animDuration / (x - actualX);
+    var yFrame = this.animDuration / (y - actualY);
 
     function draw(timeStamp) {
         if (start === null) start = timeStamp;
         var progress = timeStamp - start;
 
-        // Defines how many lines we should add to the box for this frame.
-        var xToAdd = Math.floor((progress / stepX) - actualX);
-        var yToAdd = Math.floor((progress / stepY) - actualY);
+        // Defines how many lines we should add or remove to/from the box for this frame.
+        var xStep = Math.floor((progress / xFrame) - (actualX - oldX));
+        var yStep = Math.floor((progress / yFrame) - (actualY - oldY));
 
-        if (xToAdd > 0) {
-            actualX += xToAdd;
-            var l = _this.lines.length;
+        // Corrects add variables if progress went a bit to far
+        if ((xStep > 0 && actualX + xStep > x) ||
+        (xStep < 0 && actualX + xStep < x)) {
+            xStep = x - actualX;
+        }
+        if ((yStep > 0 && actualY + yStep > y) ||
+        (yStep < 0 && actualY + yStep < y)) {
+            yStep = y - actualY;
+        }
+
+        if (xStep != 0) {
+            actualX += xStep;
             // Rewrites the lines with the new length.
-            for (var x = 0; x < l; x++) {
-                if (x == 0) {
-                    _this.lines[x].innerHTML = "┌" + "─".repeat(actualX) + "┐";
-                } else if (x == l-1) {
-                    _this.lines[x].innerHTML = "└" + "─".repeat(actualX) + "┘";
+            var l = _this.lines.length;
+            var spaces = " ".repeat(actualX-2);
+            var lines = "─".repeat(actualX-2);
+            for (var i = 0; i < l; i++) {
+                if (i == 0) {
+                    _this.lines[i].innerHTML = "┌" + lines + "┐";
+                } else if (i == l-1) {
+                    _this.lines[i].innerHTML = "└" + lines + "┘";
                 } else {
-                    _this.lines[x].innerHTML = "│" + " ".repeat(actualX) + "│";
+                    _this.lines[i].innerHTML = "│" + spaces + "│";
                 }
             }
         }
-        if (yToAdd > 0) {
-            actualY += yToAdd;
+
+        if (yStep > 0) {
+            actualY += yStep;
+
+            // Inserts new nodes and characters.
             var l = _this.lines.length - 1;
-            // Inserts new nodes and inserts characters.
-            for (var y = 0; y < yToAdd; y++) {
+            var spaces = " ".repeat(actualX-2);
+            for (var i = 0; i < yStep; i++) {
                 var elem = document.createElement("p");
-                elem.innerHTML = "│" + " ".repeat(actualX) + "│";
+                elem.innerHTML = "│" + spaces + "│";
                 div.insertBefore(elem, div.lastChild)
                 // also keeps a reference to the element for future use.
-                _this.lines.splice(l + y, 0, elem);
+                _this.lines.splice(l + i, 0, elem);
             }
+        } else if (yStep < 0) {
+            actualY += yStep;
+            yStep *= -1;
+
+            // Removes nodes
+            for (var y = 0; y < yStep; y++) {
+                div.removeChild(div.lastChild.previousElementSibling);
+            }
+            _this.lines.splice(_this.lines.length - 1 - yStep, yStep);
         }
 
         if (progress < _this.animDuration) {
@@ -303,64 +334,6 @@ Box.prototype.draw = function(callback) {
 
     requestAnimationFrame(draw);
 
-};
-Box.prototype.reDraw = function(callback) {
-    var div = document.getElementById(this.div);
-
-    var self = this;
-    var draw = setInterval(function() {
-        if(self.lines.length != self.y) {
-            if (self.lines.length < self.y) {
-
-                var elem = document.createElement("p");
-
-                var content = "│";
-                for (var i = 0; i < self.lines[0].innerHTML.length-2; i++) {
-                    content += " ";
-                }
-                content += "│";
-
-                elem.innerHTML = content;
-                div.insertBefore(elem, div.lastChild);
-                self.lines.splice(self.lines.length-1, 0, elem);
-            }
-            else {
-                self.lines.splice(self.lines.length-2, 1);
-                div.removeChild(div.childNodes[div.childNodes.length-2]);
-            }
-        }
-        else if (self.lines[0].innerHTML.length != self.x) {
-            if (self.lines[0].innerHTML.length < self.x) {
-                self.lines.forEach(function(ps, i) {
-                    var str = ps.innerHTML;
-                    if (i == 0 || i == self.lines.length-1) {
-                        ps.innerHTML = str.substr(0,1) + "─" + str.substr(1);
-                    }
-                    else {
-                        ps.innerHTML = str.substr(0,1) + " " + str.substr(1);
-                    }
-                });
-            }
-            else {
-                self.lines.forEach(function(ps, i) {
-                    var str = ps.innerHTML;
-
-                    ps.innerHTML = str.substr(0,1) + str.substr(2);
-
-                });
-            }
-        }
-
-        else  {
-            clearInterval(draw);
-            // self.lines.forEach(function(span) {
-            //     ps.innerHTML += "</br>";
-            // });
-            if (callback) callback();
-
-        }
-
-    }, 10);
 };
 Box.prototype.drawError = function() {
     var div = document.getElementById(this.div);
