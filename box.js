@@ -195,14 +195,16 @@ Box.prototype.setupLines = function(x,y) {
 
     var lines = [];
 
+    var repeatedLines = "─".repeat(x - 2);
+    var repeatedSpaces = "│" + " ".repeat(x - 2) + "│";
     for (var n = 0; n < y; n++) {
         var content;
         if (n == 0) {
-            content = "┌" + "─".repeat(x - 2) + "┐";
+            content = "┌" + repeatedLines + "┐";
         } else if (n == y-1) {
-            content = "└" + "─".repeat(x - 2) + "┘";
+            content = "└" + repeatedLines + "┘";
         } else {
-            content = "│" + " ".repeat(x - 2) + "│";
+            content = repeatedSpaces;
         }
         lines.push(content);
     }
@@ -233,6 +235,7 @@ Box.prototype.display = function(callback) {
     div.appendChild(docFragment);
 
     if (callback) callback();
+
 };
 Box.prototype.draw = function(callback) {
     /* Animation of the display of the box from previous size or scratch
@@ -287,15 +290,15 @@ Box.prototype.draw = function(callback) {
             actualX += xStep;
             // Rewrites the lines with the new length.
             var l = _this.lines.length;
-            var spaces = " ".repeat(actualX-2);
-            var lines = "─".repeat(actualX-2);
+            var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
+            var repeatedLines = "─".repeat(actualX-2);
             for (var i = 0; i < l; i++) {
                 if (i == 0) {
-                    _this.lines[i].innerHTML = "┌" + lines + "┐";
+                    _this.lines[i].innerHTML = "┌" + repeatedLines + "┐";
                 } else if (i == l-1) {
-                    _this.lines[i].innerHTML = "└" + lines + "┘";
+                    _this.lines[i].innerHTML = "└" + repeatedLines + "┘";
                 } else {
-                    _this.lines[i].innerHTML = "│" + spaces + "│";
+                    _this.lines[i].innerHTML = repeatedSpaces;
                 }
             }
         }
@@ -305,10 +308,10 @@ Box.prototype.draw = function(callback) {
 
             // Inserts new nodes and characters.
             var l = _this.lines.length - 1;
-            var spaces = " ".repeat(actualX-2);
+            var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
             for (var i = 0; i < yStep; i++) {
                 var elem = document.createElement("p");
-                elem.innerHTML = "│" + spaces + "│";
+                elem.innerHTML = repeatedSpaces;
                 div.insertBefore(elem, div.lastChild)
                 // also keeps a reference to the element for future use.
                 _this.lines.splice(l + i, 0, elem);
@@ -335,87 +338,49 @@ Box.prototype.draw = function(callback) {
     requestAnimationFrame(draw);
 
 };
-Box.prototype.drawError = function() {
-    var div = document.getElementById(this.div);
+Box.prototype.reboot = function(callback) {
+    /* Cleans every lines of the box from any text and elements that
+       could be on screen by rewriting it */
 
-    while (div.hasChildNodes()) {
-        div.removeChild(div.lastChild);
-    }
-    //var bod = document.getElementById("center");
-    this.error = true;
-    var err  = document.createElement("div");
-    err.className += "error";
-    div.appendChild(err);
+    var repeatedLines = "─".repeat(this.x - 2);
+    var repeatedSpaces = "│" + " ".repeat(this.x - 2) + "│";
 
-    var elem = document.createElement("p");
-    elem.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
-    err.appendChild(elem);
-
-    setTimeout(function() {
-        div.removeChild(err);
-    }, 2000);
-
-};
-Box.prototype.resetBox = function(callback) {
-    var self = this;
-
-    function sleep(ms) {
-      return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    async function removeRow() {
-        var div = document.getElementById(self.div);
-
-        while (self.lines.length > self.y) {
-            div.removeChild(div.lastChild);
-            self.lines.pop();
-
-            self.lines.forEach(function(line, i, array) {
-                if (line.innerHTML.length > self.x) {
-                    line.innerHTML = line.innerHTML.substr(0, line.innerHTML.length-2);
-                }
-
-            });
-            await sleep(10);
+    var l = this.lines.length;
+    for (var i = 0; i < l; i++) {
+        if (i == 0) {
+            this.lines[i].innerHTML = "┌" + repeatedLines + "┐";
+        } else if (i == l-1) {
+            this.lines[i].innerHTML = "└" + repeatedLines + "┘";
+        } else {
+            this.lines[i].innerHTML = repeatedSpaces;
         }
     }
 
-    self.removeTags();
-    removeRow();
+    if (callback) callback();
 
 };
-Box.prototype.cleanBox = function(callback) {
-    var self = this;
+Box.prototype.cleanLines = function(lines) {
+    /* Cleans only specified lines inside the box minus margins */
 
-    cleanedLine = "";
-    if (!String.prototype.repeat) {
-        for (let a = 0; a < self.x-2; a++) cleanedLine += " ";
-    }
-    else cleanedLine = " ".repeat(self.x-2);
+    var cleanLine = "│" + " ".repeat(this.x - 2) + "│";
+    var i = this.marginY;
+    var l = this.lines.length - 1 - i;
 
-    self.lines.forEach(function(line, i) {
-        if (i >= self.marginY && i < self.lines.length-self.marginY) {
-            line.innerHTML = "│" + cleanedLine + "│";
+    if (lines != undefined && typeof lines == "number") {
+        // Cleans only one line if argument is a number
+        this.lines[i+lines].innerHTML = cleanLine;
+    } else {
+        // Cleans every inner lines if no argument is given
+        // Else set specified lines for the for loop
+        if (Array.isArray(lines)) {
+            l = lines[1] + i;
+            i += lines[0];
         }
-    });
 
-    if (callback) {
-        callback();
+        for (i; i <= l; i++) {
+            this.lines[i].innerHTML = cleanLine;
+        }
     }
-
-};
-Box.prototype.rebootLine = function(line) {
-    var space = "";
-    if (!String.prototype.repeat) {
-        for (let a = 0; a < this.x-2; a++) space += " ";
-    }
-    else space = " ".repeat(this.x-2);
-
-    let str = this.lines[line+this.marginY].innerHTML;
-    let start = str.indexOf("│");
-    let end = str.lastIndexOf("│");
-
-    this.lines[line+this.marginY].innerHTML =  str[start] + space + str.substr(end);
 
 };
 Box.prototype.printChar = function(line, index, char) {
@@ -459,50 +424,24 @@ Box.prototype.removeTags = function() {
         }
     });
 };
+Box.prototype.drawError = function() {
+    var div = document.getElementById(this.div);
 
-
-Box.prototype.fillScreen = function() {
-    var self = this;
-
-    var chara = [
-        //  "⠀","⠁","⠂","⠃","⠄","⠅","⠆","⠇","⠈","⠉","⠊","⠋","⠌","⠍","⠎","⠏",
-        //  "⠐","⠑","⠒","⠓","⠔","⠕","⠖","⠗","⠘","⠙","⠚","⠛","⠜","⠝","⠞","⠟",
-        //  "⠠","⠡","⠢","⠣","⠤","⠥","⠦","⠧","⠨","⠩","⠪","⠫","⠬","⠭","⠮","⠯",
-        //  "⠰","⠱","⠲","⠳","⠴","⠵","⠶","⠷","⠸","⠹","⠺","⠻","⠼","⠽","⠾","⠿"
-
-        " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
-        " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
-        " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
-        " ", "─", "│", "┌", "┐", "└", "┘", "├", "┤", "┬", "┴", "┼", "╭", "╮", "╯",
-        "╰", "╴", "╵", "╶", "╷"
-        //"#", "/", "'", ".", ",", "%", "~", "-", "*", "~", "-", "*","~", "-", "*"
-        //" ", "─", "│", "├", "┤", "┬", "┴", "┼"
-    ]
-    //var txt = [];
-    function getRandomArbitrary(min, max) {
-        return Math.floor(Math.random() * (max - min) + min);
+    while (div.hasChildNodes()) {
+        div.removeChild(div.lastChild);
     }
+    //var bod = document.getElementById("center");
+    this.error = true;
+    var err  = document.createElement("div");
+    err.className += "error";
+    div.appendChild(err);
 
+    var elem = document.createElement("p");
+    elem.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
+    err.appendChild(elem);
 
-
-    //var fill = setInterval(function() {
-    //txt = [];
-    for (var i = 0; i < self.y -self.marginY*2; i++) {
-        if (i % 5 == 0) {
-            //chara.shift();
-        }
-        var sentence = "";
-        for (var j = 0; j < self.x - self.marginX*2; j++) {
-            var c = getRandomArbitrary(0, chara.length);
-            sentence += chara[c];
-        }
-        self.printChar(i, 0, sentence);
-    }
-
-    // txt.forEach(function(sentence, line) {
-    //     self.printChar(line, 0, sentence);
-    // });
-
-    //}, 100);
+    setTimeout(function() {
+        div.removeChild(err);
+    }, 2000);
 
 };
