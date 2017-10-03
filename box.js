@@ -445,6 +445,8 @@ Box.prototype.removeTags = function() {
 
 };
 Box.prototype.drawError = function() {
+
+    // FIXME need to rework the error handling
     var div = document.getElementById(this.div);
 
     while (div.hasChildNodes()) {

@@ -555,7 +555,7 @@ Animation.prototype.writeText = function(callback) {
                 index++;
                 return;
             }
-            self.box.printChar(line, index, shift);
+            self.box.printOnLine(line, index, shift);
 
             index++;
             setTimeout(write, speed);
@@ -569,7 +569,7 @@ Animation.prototype.writeText = function(callback) {
 Animation.prototype.appendText = function(callback) {
     var self = this;
     this.txt.forEach(function(line, i) {
-        self.box.printChar(i, 0, line);
+        self.box.printOnLine(i, 0, line);
     });
 
     if (self.tags) {
@@ -697,11 +697,11 @@ Animation.prototype.addWord = function(removeListeners, callback) {
         }
 
         if (end) {
-            self.box.rebootLine(l);
+            self.box.cleanLines(l);
             // reprint line as it was without the <s> tag
-            self.box.printChar(l, 0, self.txt[n][l].slice(0,i).join(" "));
+            self.box.printOnLine(l, 0, self.txt[n][l].slice(0,i).join(" "));
             // print the next word
-            self.box.printChar(l, index, nextWord);
+            self.box.printOnLine(l, index, nextWord);
 
             if (l == self.checkPoint[n+1][0] && index >= self.checkPoint[n+1][1]) {
                 crossOut(self.checkPoint[n+1], [l,index+nextWord.length]);
@@ -711,7 +711,7 @@ Animation.prototype.addWord = function(removeListeners, callback) {
             }
         }
         else {
-            self.box.printChar(l, index, nextWord);
+            self.box.printOnLine(l, index, nextWord);
         }
 
         index += nextWord.length + 1;
@@ -756,9 +756,9 @@ Animation.prototype.addWord = function(removeListeners, callback) {
             i--;
         }
         if (end) {
-            self.box.rebootLine(l);
-            self.box.printChar(l, 0, self.txt[n][l].slice(0,i).join(" "));
-            self.box.printChar(l, index, getSpaces(lastWord.length));
+            self.box.cleanLines(l);
+            self.box.printOnLine(l, 0, self.txt[n][l].slice(0,i).join(" "));
+            self.box.printOnLine(l, index, getSpaces(lastWord.length));
             if (index > 0) {
                 if (l <= self.checkPoint[n+1][0] && index-1 <= self.checkPoint[n+1][1]) {
                     end = false;
@@ -793,7 +793,7 @@ Animation.prototype.addWord = function(removeListeners, callback) {
             }
         }
         else {
-            self.box.printChar(l, index, getSpaces(lastWord.length));
+            self.box.printOnLine(l, index, getSpaces(lastWord.length));
         }
     }
 };
@@ -804,7 +804,7 @@ Animation.prototype.cleanEndOfLine = function(line, index, char) {
             clearInterval(cleaning);
             return;
         }
-        self.box.printChar(line, index++, char);
+        self.box.printOnLine(line, index++, char);
     }, 10);
 
 };
@@ -847,7 +847,7 @@ Animation.prototype.clean = function(pos, callback) {
         }
         else {
             if (char === "\\") char = " ";
-            self.box.printChar(line, index++, char);
+            self.box.printOnLine(line, index++, char);
         }
 
 
@@ -873,7 +873,7 @@ Animation.prototype.reversedClean = function(pos, callback) {
         }
         else {
             if (char === "\\") char = " ";
-            self.box.printChar(line, index--, char);
+            self.box.printOnLine(line, index--, char);
         }
 
     }, self.cleanSpeed);
@@ -896,7 +896,7 @@ Animation.prototype.startSubtitles = function(callback) {
                 if (progress >= active[i].end) {
                     self.box.removeTags();
                     for (var a = 0; a < active[i].txt.length; a++) {
-                        self.box.printChar(active[i].pos[a][0], active[i].pos[a][1], " ".repeat(active[i].txt[a].length));
+                        self.box.printOnLine(active[i].pos[a][0], active[i].pos[a][1], " ".repeat(active[i].txt[a].length));
                     }
                     active.splice(i, 1);
                     removed = true;
@@ -909,7 +909,7 @@ Animation.prototype.startSubtitles = function(callback) {
             self.box.removeTags();
 
             for (var i = 0; i < data.txt.length; i++) {
-                self.box.printChar(data.pos[i][0], data.pos[i][1], data.txt[i]);
+                self.box.printOnLine(data.pos[i][0], data.pos[i][1], data.txt[i]);
             }
             active.push(self.txt.shift());
             removed = true;
