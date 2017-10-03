@@ -383,13 +383,21 @@ Box.prototype.cleanLines = function(lines) {
     }
 
 };
-Box.prototype.printChar = function(line, index, char) {
-    function setCharAt(str, i, chr) {
-        return str.substr(0,i) + chr + str.substr(i+chr.length);
+Box.prototype.printOnLine = function(line, index, newContent) {
+    /* Prints a string on the box at a specified line and index */
+
+    function setCharAt(i, str, newStr) {
+        return str.substr(0, i) + newStr + str.substr(i + newStr.length);
     }
 
-    var str = this.lines[line+this.marginY].innerHTML;
-    this.lines[line+this.marginY].innerHTML = setCharAt(str, index+this.marginX, char);
+    // Adds the margins so the text remains in the writing zone
+    line += this.marginY;
+    index += this.marginX;
+    // Gets previous line content
+    var content = this.lines[line].innerHTML;
+    // Rewrites the line with new content
+    this.lines[line].innerHTML = setCharAt(index, content, newContent);
+
 };
 Box.prototype.addTags = function(tag) {
     function setTagAt(str, openI, closeI, openTag, closeTag) {
