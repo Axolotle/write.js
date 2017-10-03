@@ -383,54 +383,66 @@ Box.prototype.cleanLines = function(lines) {
     }
 
 };
-Box.prototype.printOnLine = function(line, index, newContent) {
+Box.prototype.printOnLine = function(l, i, txt) {
     /* Prints a string on the box at a specified line and index */
 
-    function setCharAt(i, str, newStr) {
-        return str.substr(0, i) + newStr + str.substr(i + newStr.length);
-    }
-
     // Adds the margins so the text remains in the writing zone
-    line += this.marginY;
-    index += this.marginX;
+    i += this.marginX;
+    l += this.marginY;
     // Gets previous line content
-    var content = this.lines[line].innerHTML;
+    var prevTxt = this.lines[l].innerHTML;
+
     // Rewrites the line with new content
-    this.lines[line].innerHTML = setCharAt(index, content, newContent);
+    var newLine = prevTxt.substr(0, i) + txt + prevTxt.substr(i + txt.length);
+
+    this.lines[l].innerHTML = newLine;
 
 };
 Box.prototype.addTags = function(tag) {
-    function setTagAt(str, openI, closeI, openTag, closeTag) {
-        return str.substring(0,openI) + openTag + str.substring(openI, closeI) + closeTag + str.substr(closeI);
-    }
+    /* Adds any tag to the box's writing zone */
 
-    var opening = "<" + tag.type
-    if (tag.class) {
-        opening += " class='" + tag.class + "'";
-    }
-    if (tag.ref) {
-        opening += " " + tag.ref;
-    }
+    // Builds the tag structure from properties given by the tag object
+    var opening = "<" + tag.type;
+    // FIXME maybe throw an attributes object and loop on it
+    if (tag.class) opening += " class='" + tag.class + "'";
+    if (tag.ref) opening += " " + tag.ref;
     opening += ">";
     var closing = "</" + tag.type + ">";
 
-    var str = this.lines[tag.line+this.marginY].innerHTML;
-    this.lines[tag.line+this.marginY].innerHTML = setTagAt(str, tag.open+this.marginX, tag.close+this.marginX, opening, closing);
+    // Adds the margins
+    var l = tag.line + this.marginY;
+    var iOpen = tag.open + this.marginX;
+    var iClose = tag.close + this.marginX;
+    // Gets previous line content
+    var prevTxt = this.lines[l].innerHTML;
+
+    // Rewrites the line with the tag to include
+    var newLine = prevTxt.substring(0, iOpen) + opening + prevTxt.substring(iOpen, iClose) + closing + prevTxt.substr(iClose);
+
+    this.lines[l].innerHTML = newLine;
+
 };
 Box.prototype.removeTags = function() {
+    /* Removes every tags from the box but lets the content on the screen */
 
-    this.lines.forEach(function(p) {
-        if (p.children) {
-            var l = p.children.length;
+    this.lines.forEach(function(line) {
+        var l = line.children.length;
+        if (l > 0) {
+            var content = line.innerHTML;
+
+            // Rewrites the line until there's no tags anymore
             for (var i = 0; i < l; i++) {
-                var index = p.innerHTML.indexOf("<");
-                var txt = p.children[0].innerHTML;
-                p.removeChild(p.children[0]);
+                var open = content.indexOf("<");
+                var close = content.indexOf(">", content.indexOf(">")+1);
+                var txt = line.children[i].innerHTML;
 
-                p.innerHTML = p.innerHTML.substr(0, index) + txt + p.innerHTML.substr(index);
+                content = content.substring(0, open) + txt + content.substr(close+1);
             }
+
+            line.innerHTML = content;
         }
     });
+
 };
 Box.prototype.drawError = function() {
     var div = document.getElementById(this.div);
