@@ -12,20 +12,28 @@ function readJSONFile(file, callback) {
 
 function formatJSON(json, x, y, marginX, marginY, jsonArray) {
     /* Formats a given text so it can be displayed in the box with
-       every informations needed by the animation's methods */
+       every informations needed by the animation's methods. */
 
-    // Creates an empty object that will be returned after processing
+    // Creates an empty object that will be returned after processing.
     var obj = {};
+
+    // Stores text in an array if it's not already. FIXME good scope ?
+    var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
+    // FIXME add onTheBox & dontAddY options
+    // FIXME add center x or/and y options
+    var yZone = y - marginY * 2;
+    var xZone = x - marginX * 2;
 
     var neverFirst = ["?", "!", ":", ";", "»"];
     var neverLast = ["¿", "¡", "«"];
+    var tags = [];
 
-    // Applies the specified formatting to the text
+    // Applies the specified formatting to the text.
     var format = json.format;
     if (format == undefined || format == "paragraph") {
         obj.txt = formatting();
     } else if (format == "align") {
-        obj.txt = aligning();
+        obj.txt = aligning(formatting());
     } else if (format == "combine") {
         obj.txt = combining();
     } else if (format == "subtitle") {
@@ -34,48 +42,70 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
 
 
     function formatting() {
+        /* Splits lines if its length higher than the box width. */
 
+        var txtLength = txt.length;
+        for (var l = 0; l < txtLength; l++) {
+            if (txt[l].length > xZone) {
+                // Defines an index variable that contains tags length
+                // and another that ignore them.
+                let i = 0;
+                let iScreen = i;
+
+                let words = txt[l].split(" ");
+                let wordsLength = words.length;
+
+                // Determines where to cut the line.
+                for (let w = 0; w < wordsLength; w++) {
+                    // Keeps the real length of the line so we can cut it with the tags included.
+                    i += w == 0 ? words[w].length : 1 + words[w].length;
+                    iScreen += w == 0 ? 0 : 1;
+
+                    // Checks if there's tags.
+                    if (words[w].indexOf("{{") > -1) {
+                        var wordCopy = words[w];
+                        while (wordCopy.indexOf("{{") > -1) {
+                            var openPos = wordCopy.indexOf("{{");
+                            var closePos = wordCopy.indexOf("}}");
+                            wordCopy = wordCopy.substring(0, openPos) + wordCopy.substr(closePos+2);
+                        }
+                        // Adds the word's length whitout the tags.
+                        iScreen += wordCopy.length;
+
+                    } else {
+                        iScreen += words[w].length;
+                    }
+
+                    // Checks if actual line length greater than the box width
+                    if (iScreen > xZone) {
+                        // Checks if there's no character requiring special
+                        // orthotypography and cuts the line accordingly.
+                        if (neverFirst.indexOf(words[w]) > -1
+                            || neverLast.indexOf(words[w-1]) > -1) {
+                            i -= words[w].length + words[w-1].length + 2;
+                        } else {
+                            i -= words[w].length;
+                        }
+                        // Adds the rest of the line right after the current one
+                        // and adds a iteration to the for loop.
+                        txt.splice(l + 1, 0, txt[l].substr(i + 1));
+                        txtLength++;
+                        // Replaces the current one
+                        txt[l] = txt[l].substring(0, i);
+
+                        // Breaks the loop on words, if the new line is still
+                        // wider than the box, the next iteration will cut it.
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     function aligning() {
         /* Formats the text by aligning it to the specified direction */
 
-        // Stores text in an array if it's not already
-        var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
         var adder = json.charToAdd;
-
-        // FIXME add onTheBox & dontAddY options
-        // FIXME add center x or/and y options
-        var yZone = y - marginY * 2;
-        var xZone = x - marginX * 2;
-
-        // FIXME maybe build a function that do this kind of formatting before aligning it
-        txt.forEach(function(line, lineIndex) {
-            // Cuts line if its too long
-            if (line.length > xZone) {
-                // FIXME deal with tags
-                var i = 0;
-                let words = line.split(" ");
-                let wordsLength = words.length;
-
-                for (var w = 0; w < wordsLength; w++) {
-                    i += w == 0 ? words[w].length : 1 + words[w].length;
-
-                    if (i > xZone) {
-                        if (neverFirst.indexOf(words[w]) > -1 ||
-                            neverLast.indexOf(words[w-1]) > -1) {
-                            i -= words[w].length + words[w-1].length + 2;
-                        } else {
-                            i -= words[w].length;
-                        }
-                        txt.splice(lineIndex + 1, 0, line.substr(i + 1));
-                        txt[lineIndex] = line = line.substring(0, i);
-
-                        break;
-                    }
-                }
-            }
-        });
 
         var yToAdd = yZone - txt.length;
         var xToAdd;
@@ -103,6 +133,7 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
     function subtitling() {
 
     }
+
 
     return obj;
 
