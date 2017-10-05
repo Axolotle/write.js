@@ -13,6 +13,7 @@ function readJSONFile(file, callback) {
 function formatJSON(json, x, y, marginX, marginY, jsonArray) {
     /* Formats a given text so it can be displayed in the box with
        every informations needed by the animation's methods. */
+    // FIXME TOO MUCH SIDE-EFFECT FUNCTIONS WTF
 
     // Creates an empty object that will be returned after processing.
     var obj = {};
@@ -24,16 +25,19 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
     var yZone = y - marginY * 2;
     var xZone = x - marginX * 2;
 
-    var neverFirst = ["?", "!", ":", ";", "»"];
-    var neverLast = ["¿", "¡", "«"];
-    var tags = [];
+
 
     // Applies the specified formatting to the text.
     var format = json.format;
     if (format == undefined || format == "paragraph") {
-        obj.txt = formatting();
+        let formated = formatting(txt);
+        obj.txt = formated.txt;
+        let options = manageOptions(formated.options);
+        //Object.assign(obj, ...options);
     } else if (format == "align") {
-        obj.txt = aligning(formatting());
+        let formated = formatting(txt);
+        //formated = aligning(formated.txt);
+
     } else if (format == "combine") {
         obj.txt = combining();
     } else if (format == "subtitle") {
@@ -41,11 +45,17 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
     }
 
 
-    function formatting() {
+    function formatting(txt) {
         /* Splits lines if its length higher than the box width. */
 
+        var neverFirst = ["?", "!", ":", ";", "»"];
+        var neverLast = ["¿", "¡", "«"];
+
+        var tagsByLine = [];
+
         var txtLength = txt.length;
-        for (var l = 0; l < txtLength; l++) {
+        for (let l = 0; l < txtLength; l++) {
+            let line = txt[l];
             if (txt[l].length > xZone) {
                 // Defines an index variable that contains tags length
                 // and another that ignore them.
@@ -63,11 +73,11 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
 
                     // Checks if there's tags.
                     if (words[w].indexOf("{{") > -1) {
-                        var wordCopy = words[w];
+                        let wordCopy = words[w];
                         while (wordCopy.indexOf("{{") > -1) {
-                            var openPos = wordCopy.indexOf("{{");
-                            var closePos = wordCopy.indexOf("}}");
-                            wordCopy = wordCopy.substring(0, openPos) + wordCopy.substr(closePos+2);
+                            let openPos = wordCopy.indexOf("{{");
+                            let closePos = wordCopy.indexOf("}}") + 2;
+                            wordCopy = wordCopy.substring(0, openPos) + wordCopy.substr(closePos);
                         }
                         // Adds the word's length whitout the tags.
                         iScreen += wordCopy.length;
@@ -84,7 +94,7 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
                             || neverLast.indexOf(words[w-1]) > -1) {
                             i -= words[w].length + words[w-1].length + 2;
                         } else {
-                            i -= words[w].length;
+                            i -= words[w].length + 1;
                         }
                         // Adds the rest of the line right after the current one
                         // and adds a iteration to the for loop.
@@ -99,6 +109,32 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
                     }
                 }
             }
+
+            let tags = [];
+            if (txt[l].indexOf("{{") > -1) {
+                while (txt[l].indexOf("{{") > -1) {
+                    let openPos = txt[l].indexOf("{{");
+                    let closePos = txt[l].indexOf("}}") + 2;
+                    let tagStr = txt[l].substring(openPos + 2, closePos - 2);
+
+                    txt[l] = txt[l].substring(0, openPos)
+                           + txt[l].substr(closePos);
+
+                    var tag = {};
+                    tagStr = tagStr.split(":");
+                    tag.type = tagStr[0];
+                    tag.options = tagStr[1].split("|");
+                    tag.pos = [openPos, l];
+
+                    tags.push(tag);
+                }
+            }
+            tagsByLine.push(tags);
+        }
+
+        return {
+            txt: txt,
+            options: tagsByLine
         }
     }
 
@@ -134,6 +170,9 @@ function formatJSON(json, x, y, marginX, marginY, jsonArray) {
 
     }
 
+    function manageOptions(options) {
+
+    }
 
     return obj;
 
