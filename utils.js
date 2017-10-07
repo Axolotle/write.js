@@ -31,18 +31,20 @@ FormatJSON.prototype.getNewJSON = function(json, jsonArray) {
     this.yZone = this.y - this.marginY * 2;
     this.xZone = this.x - this.marginX * 2;
 
-
-
     // Applies the specified formatting to the text.
     var format = json.format;
     if (format == undefined || format == "paragraph") {
-        obj.txt = this.splitLines(txt);
-        //Object.assign(obj, ...options);
+        let newTxt = this.separateOptFromText(this.splitLines(txt));
+        obj.txt = newTxt.txt;
+        if (newTxt.options.length > 0) {
+            let options = this.manageOptions(newTxt.options, json);
+            obj = {...obj, ...options};
+        }
     } else if (format == "align") {
         let newTxt = this.separateOptFromText(this.align(txt, json.charToAdd));
         obj.txt = newTxt.txt;
         if (newTxt.options.length > 0) {
-            let options = this.manageOptions(newTxt.options);
+            let options = this.manageOptions(newTxt.options, json);
             obj = {...obj, ...options};
         }
     } else if (format == "combine") {
@@ -183,7 +185,7 @@ FormatJSON.prototype.separateOptFromText = function(txt) {
     }
 
 };
-FormatJSON.prototype.manageOptions = function(options) {
+FormatJSON.prototype.manageOptions = function(options, json) {
     /* Generates the options obj that will be added to the main obj */
     // FIXME REWORK ALL THIS SHIT
     var o = {};
@@ -191,11 +193,13 @@ FormatJSON.prototype.manageOptions = function(options) {
     options.forEach(function(optLine) {
         var length = 0;
         optLine.forEach(function(opt, i) {
-            if (opt.type == "tag") {
+            var type = opt.type;
+
+            if (type == "tag") {
                 if (!o.hasOwnProperty("tags")) o.tags = [];
 
                 let tag = {
-                    index : opt.pos[0] + length,
+                    index: opt.pos[0] + length,
                     line: opt.pos[1]
                 };
 
@@ -213,6 +217,19 @@ FormatJSON.prototype.manageOptions = function(options) {
 
                 length += tag.content.length;
                 o.tags.push(tag);
+            } else if (type == "pause") {
+                if (!o.hasOwnProperty("pause")) o.pause = [];
+                let pause = [[opt.pos[1],opt.pos[0]], opt.value*1000];
+                o.pause.push(pause)
+            } else if (type == "speed") {
+                if (!o.hasOwnProperty("altSpeed")) o.altSpeed = [];
+                if (!o.hasOwnProperty("speed")) {
+                    o.speed = json.hasOwnProperty("speed") ? json.speed : 70;
+                }
+                let speed = (parseFloat(opt.value) * -1) * 20 + o.speed;
+                if (speed < 0) speed = 0;
+                let speedChange = [[opt.pos[1],opt.pos[0]], speed];
+                o.altSpeed.push(speedChange);
             }
         });
     });
@@ -223,12 +240,6 @@ FormatJSON.prototype.manageOptions = function(options) {
 FormatJSON.prototype.noOptTags = function(str) {
     /* Returns a string without option's tags */
 
-    while (str.indexOf("{{") > -1) {
-        let openPos = str.indexOf("{{");
-        let closePos = str.indexOf("}}") + 2;
-        str = str.substring(0, openPos) + str.substr(closePos);
-    }
-
-    return str;
+    return str.replace(/(\{\{[^}]+)\}\}/g, "");
 
 };

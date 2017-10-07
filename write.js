@@ -451,7 +451,7 @@ Animation.prototype.init = function(obj, box) {
     if (obj.tags) this.tags = obj.tags;
     if (obj.checkPoint) this.checkPoint = obj.checkPoint;
     if (obj.endAt) this.endAt = obj.endAt;
-
+    console.log(obj);
     this.startAt = obj.startAt;
     this.altSpeed = obj.altSpeed || [];
     this.pause = obj.pause || [];
@@ -479,7 +479,6 @@ Animation.prototype.stopListener = function() {
     window.addEventListener("stop", stop);
 };
 Animation.prototype.formatStringsToIndieChar = function(sentences) {
-
     var t = sentences.map(function(sentence) {
         return sentence.split("");
     });
@@ -488,15 +487,10 @@ Animation.prototype.formatStringsToIndieChar = function(sentences) {
 
 };
 Animation.prototype.writeText = function(callback) {
-
     this.txt = this.formatStringsToIndieChar(this.txt);
 
-    var line = this.startAt[0];
-    var index = this.startAt[1];
-
-    if (this.onTheBox) {
-        index -= this.box.marginX;
-    }
+    var line =  0;
+    var index =  0;
 
     var l = 0;
     var i = 0;
@@ -508,7 +502,6 @@ Animation.prototype.writeText = function(callback) {
         if (self.stop) {
             return;
         }
-
         if (self.pause[0] != undefined && l == self.pause[0][0][0] && index == self.pause[0][0][1]) {
             var pause = self.pause.shift();
             if (pause != undefined) {
