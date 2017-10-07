@@ -443,7 +443,6 @@ function Animation(obj, box) {
     this.init(obj, box);
 }
 Animation.prototype.init = function(obj, box) {
-
     this.cleanSpeed = obj.cleanSpeed;
 
     if (obj.cleanAt) this.cleanAt = obj.cleanAt;
@@ -574,7 +573,7 @@ Animation.prototype.appendText = function(callback) {
 
     if (self.tags) {
         self.tags.forEach(function(tag) {
-            self.box.addTags(tag);
+            self.box.printOnLine(tag.line, tag.index, tag.content, true);
         })
     }
     if (callback) {

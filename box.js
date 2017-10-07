@@ -50,7 +50,7 @@ Box.prototype.getPageDimension = function() {
     var pageW = Math.floor(window.innerWidth / chara.w);
     var pageH = Math.floor(window.innerHeight / chara.h);
 
-    return {"w" : pageW, "h" : pageH};
+    return {w: pageW, h: pageH};
 
 };
 Box.prototype.getCharacterDimension = function() {
@@ -67,7 +67,7 @@ Box.prototype.getCharacterDimension = function() {
 
     test.parentNode.removeChild(test);
 
-    return {"w" : w, "h" : h};
+    return {w: w, h: h};
 
 };
 Box.prototype.getBoxSize = function (opt) {
@@ -383,7 +383,7 @@ Box.prototype.cleanLines = function(lines) {
     }
 
 };
-Box.prototype.printOnLine = function(l, i, txt) {
+Box.prototype.printOnLine = function(l, i, txt, insert) {
     /* Prints a string on the box at a specified line and index */
 
     // Adds the margins so the text remains in the writing zone
@@ -392,8 +392,11 @@ Box.prototype.printOnLine = function(l, i, txt) {
     // Gets previous line content
     var prevTxt = this.lines[l].innerHTML;
 
+    // If insert is true don't overwrite the text
+    var overwrite = insert ? 0 : txt.length;
+
     // Rewrites the line with new content
-    var newLine = prevTxt.substr(0, i) + txt + prevTxt.substr(i + txt.length);
+    var newLine = prevTxt.substr(0, i) + txt + prevTxt.substr(i + overwrite);
 
     this.lines[l].innerHTML = newLine;
 

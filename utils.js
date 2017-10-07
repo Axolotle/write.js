@@ -39,7 +39,12 @@ FormatJSON.prototype.getNewJSON = function(json, jsonArray) {
         obj.txt = this.splitLines(txt);
         //Object.assign(obj, ...options);
     } else if (format == "align") {
-        obj.txt = this.align(this.splitLines(txt), json.charToAdd);
+        let newTxt = this.separateOptFromText(this.align(txt, json.charToAdd));
+        obj.txt = newTxt.txt;
+        if (newTxt.options.length > 0) {
+            let options = this.manageOptions(newTxt.options);
+            obj = {...obj, ...options};
+        }
     } else if (format == "combine") {
         obj.txt = this.combine(txt);
     } else if (format == "subtitle") {
@@ -121,6 +126,8 @@ FormatJSON.prototype.align = function(txt, adder) {
     var yToAdd = yZone - txt.length;
     var xToAdd;
 
+    txt = this.splitLines(txt);
+
     var _this = this;
     txt.forEach(function(line, index) {
         xToAdd = xZone - _this.noOptTags(line).length;
@@ -138,32 +145,80 @@ FormatJSON.prototype.align = function(txt, adder) {
 
 };
 FormatJSON.prototype.combine = function(txt) {
-
 };
 FormatJSON.prototype.subtitle = function(txt) {
+};
+FormatJSON.prototype.separateOptFromText = function(txt) {
+    /* Separates the texts from the option's tags and returns it as an object */
+
+    var options = [];
+
+    txt.forEach(function(line, l) {
+        if (line.indexOf("{{") > -1) {
+            var optLine = [];
+            while (line.indexOf("{{") > -1) {
+                let openPos = line.indexOf("{{");
+                let closePos = line.indexOf("}}") + 2;
+                let optStr = line.substring(openPos + 2, closePos - 2);
+
+                line = line.substring(0, openPos) + line.substr(closePos);
+
+                let opt = {};
+                optStr = optStr.split(":");
+                opt.type = optStr[0];
+                opt.options = optStr[1].split("|");
+                opt.value = opt.options.shift();
+                opt.pos = [openPos, l];
+
+                optLine.push(opt);
+            }
+            txt[l] = line;
+            options.push(optLine);
+        }
+    });
+
+    return {
+        txt: txt,
+        options: options
+    }
 
 };
-FormatJSON.prototype.manageOptions = function(txt) {
-    let tags = [];
-    if (txt[l].indexOf("{{") > -1) {
-        while (txt[l].indexOf("{{") > -1) {
-            let openPos = txt[l].indexOf("{{");
-            let closePos = txt[l].indexOf("}}") + 2;
-            let tagStr = txt[l].substring(openPos + 2, closePos - 2);
+FormatJSON.prototype.manageOptions = function(options) {
+    /* Generates the options obj that will be added to the main obj */
+    // FIXME REWORK ALL THIS SHIT
+    var o = {};
 
-            txt[l] = txt[l].substring(0, openPos)
-                   + txt[l].substr(closePos);
+    options.forEach(function(optLine) {
+        var length = 0;
+        optLine.forEach(function(opt, i) {
+            if (opt.type == "tag") {
+                if (!o.hasOwnProperty("tags")) o.tags = [];
 
-            var tag = {};
-            tagStr = tagStr.split(":");
-            tag.type = tagStr[0];
-            tag.options = tagStr[1].split("|");
-            tag.pos = [openPos, l];
+                let tag = {
+                    index : opt.pos[0] + length,
+                    line: opt.pos[1]
+                };
 
-            tags.push(tag);
-        }
-    }
-    tagsByLine.push(tags);
+                if (opt.value.startsWith("/")) {
+                    tag.content = "</" + opt.value.substr(1) + ">";
+                } else {
+                    let attrs = "";
+                    opt.options.forEach(function(attr, i) {
+                        attr = attr.split("=");
+                        attrs += " " + attr[0] + "='";
+                        attrs += attr[1].replace(",", " ") + "'";
+                    });
+                    tag.content = "<" + opt.value + attrs + ">";
+                }
+
+                length += tag.content.length;
+                o.tags.push(tag);
+            }
+        });
+    });
+
+    return o;
+
 };
 FormatJSON.prototype.noOptTags = function(str) {
     /* Returns a string without option's tags */
