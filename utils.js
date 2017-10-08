@@ -17,102 +17,129 @@ function FormatJSON(x, y, marginX, marginY) {
     this.marginY = marginY;
 
 }
-FormatJSON.prototype.getNewJSON = function(json, jsonArray) {
+FormatJSON.prototype.getNewJSON = function(JSONs) {
     /* Formats a given text so it can be displayed in the box with
        every informations needed by the animation's methods. */
+    var n = JSONs.length;
+    this.transfer = [];
+    for (let i = 0; i < n; i++) {
+        this.transfer.push([]);
+    }
 
-    // Creates an empty object that will be returned after processing.
-    var obj = {};
-
-    // Stores text in an array if it's not already. FIXME good scope ?
-    var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
     // FIXME add onTheBox & dontAddY options
     // FIXME add center x or/and y options
     this.yZone = this.y - this.marginY * 2;
     this.xZone = this.x - this.marginX * 2;
+    this.i = 0;
+    var _this = this;
 
-    // Applies the specified formatting to the text.
-    var format = json.format;
-    if (format == undefined || format == "paragraph") {
-        let newTxt = this.separateOptFromText(this.splitLines(txt));
-        obj.txt = newTxt.txt;
-        if (newTxt.options.length > 0) {
-            let options = this.manageOptions(newTxt.options, json);
-            obj = {...obj, ...options};
-        }
-    } else if (format == "align") {
-        let newTxt = this.separateOptFromText(this.align(txt, json.charToAdd));
-        obj.txt = newTxt.txt;
-        if (newTxt.options.length > 0) {
-            let options = this.manageOptions(newTxt.options, json);
-            obj = {...obj, ...options};
-        }
-    } else if (format == "combine") {
-        obj.txt = this.combine(txt);
-    } else if (format == "subtitle") {
-        obj.txt = this.subtitle(txt);
+    var returnedObj = [];
+    if (JSONs.length > 1) {
+        JSONs.forEach(function(json, i) {
+            returnedObj.push(format(json, i));
+            _this.i++;
+        });
+    } else {
+        returnedObj = format(JSONs);
     }
 
-    return obj;
+
+    function format(json) {
+        var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
+        var obj = {};
+        // Applies the specified formatting to the text.
+        var format = json.format;
+        var transfer = _this.transfer[_this.i];
+        obj.startAt = transfer && transfer.startAt ? transfer.startAt : [0,0];
+
+        if (format == undefined || format == "paragraph") {
+            let newTxt = _this.separateOptFromText(_this.splitTxt(txt, obj.startAt));
+            if (newTxt.options.length > 0) {
+                let options = _this.manageOptions(newTxt.options, json);
+                obj = {txt: newTxt.txt, ...options, ...obj};
+            }
+        } else if (format == "align") {
+            let newTxt = _this.separateOptFromText(_this.align(txt, json.charToAdd));
+            if (newTxt.options.length > 0) {
+                let options = _this.manageOptions(newTxt.options, json);
+                obj = {txt: newTxt.txt, ...options, ...obj};
+            }
+        } else if (format == "combine") {
+            obj.txt = _this.combine(txt);
+        } else if (format == "subtitle") {
+            obj.txt = _this.subtitle(txt);
+        }
+
+        return obj;
+    }
+
+    return returnedObj;
 }
-FormatJSON.prototype.splitLines = function(txt) {
+FormatJSON.prototype.splitTxt = function(txt, startAt) {
     /* Splits lines if its length higher than the box width. */
 
     // Defines characters that should'nt be the first or the last
     // character of a line
     var nvrFirst = ["?", "!", ":", ";", "»"];
     var nvrLast = ["¿", "¡", "«"];
-
+    var _this = this;
     var txtLength = txt.length;
     var xZone = this.xZone;
-    for (let l = 0; l < txtLength; l++) {
-        let line = txt[l];
-        if (txt[l].length > xZone) {
-            // Defines an index variable that contains tags length
-            // and another that ignore them.
-            let i = 0;
-            let iScreen = i;
 
-            let words = txt[l].split(" ");
-            let wordsLength = words.length;
+    function splitting(starter) {
+        // Defines an index variable that contains tags length
+        // and another that ignore them.
+        let i = starter;
+        let iScreen = i;
 
-            // Determines where to cut the line.
-            for (let w = 0; w < wordsLength; w++) {
-                // Keeps the real length of the line so we can cut it with the tags included.
-                i += w == 0 ? words[w].length : 1 + words[w].length;
-                iScreen += w == 0 ? 0 : 1;
+        let words = txt[l].split(" ");
+        let wordsLength = words.length;
 
-                // Checks if there's tags.
-                if (words[w].indexOf("{{") > -1) {
-                    // Adds the word's length whitout the tags.
-                    iScreen += this.noOptTags(words[w]).length;
-                } else {
-                    iScreen += words[w].length;
-                }
+        // Determines where to cut the line.
+        for (let w = 0; w < wordsLength; w++) {
+            // Keeps the real length of the line so we can cut it with the tags included.
+            i += w == 0 ? words[w].length : 1 + words[w].length;
+            iScreen += w == 0 ? 0 : 1;
 
-                // Checks if actual line length greater than the box width
-                if (iScreen > xZone) {
-                    // Checks if there's no character requiring special
-                    // orthotypography and cuts the line accordingly.
-                    let first = nvrFirst.indexOf(this.noOptTags(words[w])) > -1;
-                    let last = nvrLast.indexOf(this.noOptTags(words[w-1])) > -1;
-                    if (first || last) {
-                        i -= words[w].length + words[w-1].length + 2;
-                    } else {
-                        i -= words[w].length + 1;
-                    }
-                    // Adds the rest of the line right after the current one
-                    // and adds a iteration to the for loop.
-                    txt.splice(l + 1, 0, txt[l].substr(i + 1));
-                    txtLength++;
-                    // Replaces the current one
-                    txt[l] = txt[l].substring(0, i);
-
-                    // Breaks the loop on words, if the new line is still
-                    // wider than the box, the next iteration will cut it.
-                    break;
-                }
+            // Checks if there's tags.
+            if (words[w].indexOf("{{") > -1) {
+                // Adds the word's length whitout the tags.
+                iScreen += _this.noOptTags(words[w]).length;
+            } else {
+                iScreen += words[w].length;
             }
+
+            // Checks if actual line length greater than the box width
+            if (iScreen > xZone) {
+                // Checks if there's no character requiring special
+                // orthotypography and cuts the line accordingly.
+                let first = nvrFirst.indexOf(_this.noOptTags(words[w])) > -1;
+                let last = nvrLast.indexOf(_this.noOptTags(words[w-1])) > -1;
+                if (first || last) {
+                    i -= words[w].length + words[w-1].length + 2;
+                } else {
+                    i -= words[w].length + 1;
+                }
+                // Adds the rest of the line right after the current one
+                // and adds a iteration to the for loop.
+                txt.splice(l + 1, 0, txt[l].substr(i + 1));
+                txtLength++;
+                // Replaces the current one
+                txt[l] = txt[l].substring(0, i);
+
+                // Breaks the loop on words, if the new line is still
+                // wider than the box, the next iteration will cut it.
+                break;
+            }
+        }
+    }
+
+    for (var l = 0; l < txtLength; l++) {
+        if (l == 0 && startAt && txt[l].length > xZone) {
+            splitting(startAt[0]);
+        }
+        else if (txt[l].length > xZone) {
+            splitting(0);
         }
     }
 
@@ -128,7 +155,7 @@ FormatJSON.prototype.align = function(txt, adder) {
     var yToAdd = yZone - txt.length;
     var xToAdd;
 
-    txt = this.splitLines(txt);
+    txt = this.splitTxt(txt);
 
     var _this = this;
     txt.forEach(function(line, index) {
@@ -154,6 +181,7 @@ FormatJSON.prototype.separateOptFromText = function(txt) {
     /* Separates the texts from the option's tags and returns it as an object */
 
     var options = [];
+    var _this = this;
 
     txt.forEach(function(line, l) {
         if (line.indexOf("{{") > -1) {
@@ -162,6 +190,7 @@ FormatJSON.prototype.separateOptFromText = function(txt) {
                 let openPos = line.indexOf("{{");
                 let closePos = line.indexOf("}}") + 2;
                 let optStr = line.substring(openPos + 2, closePos - 2);
+                let linePlus = 0;
 
                 line = line.substring(0, openPos) + line.substr(closePos);
 
@@ -170,7 +199,16 @@ FormatJSON.prototype.separateOptFromText = function(txt) {
                 opt.type = optStr[0];
                 opt.options = optStr[1].split("|");
                 opt.value = opt.options.shift();
-                opt.pos = [openPos, l];
+                if (_this.transfer[_this.i] && _this.transfer[_this.i].startAt) {
+                    if (l == 0) {
+                        openPos += _this.transfer[_this.i].startAt[0];
+                    }
+                    linePlus += _this.transfer[_this.i].startAt[1];
+                }
+                if (true) {
+
+                }
+                opt.pos = [openPos, l + linePlus];
 
                 optLine.push(opt);
             }
@@ -189,10 +227,16 @@ FormatJSON.prototype.manageOptions = function(options, json) {
     /* Generates the options obj that will be added to the main obj */
     // FIXME REWORK ALL THIS SHIT
     var o = {};
+    if (this.transfer[this.i] && this.transfer[this.i].length > 0) {
+        options = [this.transfer[this.i], ...options];
+    }
 
+    var _this = this;
     options.forEach(function(optLine) {
+        // The tag options need a length variable to recalculate its position
+        // when multiple tags are on the same line.
         var length = 0;
-        optLine.forEach(function(opt, i) {
+        optLine.forEach(function(opt) {
             var type = opt.type;
 
             if (type == "tag") {
@@ -207,7 +251,7 @@ FormatJSON.prototype.manageOptions = function(options, json) {
                     tag.content = "</" + opt.value.substr(1) + ">";
                 } else {
                     let attrs = "";
-                    opt.options.forEach(function(attr, i) {
+                    opt.options.forEach(function(attr) {
                         attr = attr.split("=");
                         attrs += " " + attr[0] + "='";
                         attrs += attr[1].replace(",", " ") + "'";
@@ -217,19 +261,63 @@ FormatJSON.prototype.manageOptions = function(options, json) {
 
                 length += tag.content.length;
                 o.tags.push(tag);
-            } else if (type == "pause") {
+            }
+            else if (type == "pause") {
                 if (!o.hasOwnProperty("pause")) o.pause = [];
                 let pause = [[opt.pos[1],opt.pos[0]], opt.value*1000];
                 o.pause.push(pause)
-            } else if (type == "speed") {
+            }
+            else if (type == "speed") {
                 if (!o.hasOwnProperty("altSpeed")) o.altSpeed = [];
                 if (!o.hasOwnProperty("speed")) {
-                    o.speed = json.hasOwnProperty("speed") ? json.speed : 70;
+                    o.speed = json.hasOwnProperty("speed") ? json.speed : 15;
                 }
                 let speed = (parseFloat(opt.value) * -1) * 20 + o.speed;
                 if (speed < 0) speed = 0;
                 let speedChange = [[opt.pos[1],opt.pos[0]], speed];
                 o.altSpeed.push(speedChange);
+            }
+            else if (type == "clean") {
+
+                function transferClean(pos) {
+                    var ref = opt.value.substr(pos);
+                    var objRef = _this.transfer[ref];
+                    opt.value = opt.value.substring(0, pos);
+                    objRef.push(opt)
+                }
+
+                if (opt.value.startsWith("/")) {
+                    if (opt.value.length > 2) {
+                        transferClean(2);
+                    } else {
+                        let iClean = opt.value.charCodeAt(1) - 97;
+                        if (!o.hasOwnProperty("cleanAt")) o.cleanAt = [];
+                        if (o.cleanAt[iClean] === undefined) {
+                            o.cleanAt[iClean] = [];
+                        }
+                        o.cleanAt[iClean][1] = opt.pos;
+                    }
+
+                } else {
+                    if (opt.value.length > 1) {
+                        transferClean(1);
+                    } else {
+                        let iClean = opt.value.charCodeAt(0) - 97;
+                        let chara = opt.options[0].replace("&nbsp;", " ");
+
+                        if (!o.hasOwnProperty("cleanAt")) o.cleanAt = [];
+                        if (o.cleanAt[iClean] === undefined) {
+                            o.cleanAt[iClean] = [];
+                        }
+                        o.cleanAt[iClean][0] = opt.pos;
+                        o.cleanAt[iClean][2] = chara;
+                        o.cleanAt[iClean][3] = opt.options[1] || 15/2;
+                    }
+                }
+                if (!o.hasOwnProperty("cleanAt")) o.cleanAt = [];
+            }
+            else if (type == "start") {
+                _this.transfer[opt.value].startAt = opt.pos;
             }
         });
     });

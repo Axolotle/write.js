@@ -443,16 +443,14 @@ function Animation(obj, box) {
     this.init(obj, box);
 }
 Animation.prototype.init = function(obj, box) {
-    this.cleanSpeed = obj.cleanSpeed;
-
     if (obj.cleanAt) this.cleanAt = obj.cleanAt;
     if (obj.noClearingSpace) this.noClearingSpace = obj.noClearingSpace;
     if (obj.onTheBox) this.onTheBox = true;
     if (obj.tags) this.tags = obj.tags;
     if (obj.checkPoint) this.checkPoint = obj.checkPoint;
     if (obj.endAt) this.endAt = obj.endAt;
-    console.log(obj);
-    this.startAt = obj.startAt;
+
+    this.startAt = obj.startAt || [0,0];
     this.altSpeed = obj.altSpeed || [];
     this.pause = obj.pause || [];
 
@@ -489,13 +487,12 @@ Animation.prototype.formatStringsToIndieChar = function(sentences) {
 Animation.prototype.writeText = function(callback) {
     this.txt = this.formatStringsToIndieChar(this.txt);
 
-    var line =  0;
-    var index =  0;
+    var line = this.startAt[1] || 0;
+    var index =  this.startAt[0] || 0;
 
     var l = 0;
     var i = 0;
-
-    var speed = this.speed;
+    var speed = this.speed || 15;
 
     var self = this;
     var write = function() {
@@ -803,10 +800,12 @@ Animation.prototype.cleanEndOfLine = function(line, index, char) {
 Animation.prototype.clean = function(pos, callback) {
 
     var cleanAt = this.cleanAt[pos] || this.cleanAt[0];
-    var line = cleanAt[0][0];
-    var index = cleanAt[0][1];
+    var line = cleanAt[0][1];
+    var index = cleanAt[0][0];
     var char,
         chars;
+
+    var speed = cleanAt[3];
 
     if (cleanAt[2].length > 1) chars = cleanAt[2].split("");
     else char = cleanAt[2];
@@ -829,7 +828,7 @@ Animation.prototype.clean = function(pos, callback) {
             }
         }
         // clear the interval at specified line/index
-        if (line >= cleanAt[1][0] && index >= cleanAt[1][1]) {
+        if (line >= cleanAt[1][1] && index >= cleanAt[1][0]) {
             clearInterval(cleaningPage);
             if (callback) callback();
         }
@@ -843,7 +842,7 @@ Animation.prototype.clean = function(pos, callback) {
         }
 
 
-    }, self.cleanSpeed);
+    }, speed);
 
 };
 Animation.prototype.reversedClean = function(pos, callback) {
