@@ -886,6 +886,9 @@ Animation.prototype.startSubtitles = function(callback) {
     var removed = false;
 
     function sub(timestamp) {
+        if (self.stop) {
+            return;
+        }
         if (start === null) start = timestamp;
         var progress = timestamp - start;
 
