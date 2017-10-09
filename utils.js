@@ -38,7 +38,7 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
     }
 
     function format(json) {
-
+        console.log(json);
         var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
         var transfer = _this.transfer[_this.i];
         var startAt = transfer && transfer.startAt ? transfer.startAt : [0,0];
@@ -50,23 +50,27 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         // FIXME add dontAddY options
         // FIXME add center x or/and y options
 
+        var obj = {
+            txt : [],
+            startAt : startAt
+        };
+
         var newTxt;
         if (format == undefined || format == "paragraph") {
-            newTxt = _this.cleanOptions(_this.splitTxt(txt, startAt, zone));
+            newTxt = _this.splitTxt(txt, startAt, zone);
+            newTxt = _this.cleanOptions(newTxt);
         } else if (format == "align") {
-            newTxt = _this.cleanOptions(_this.align(txt, startAt,
-                                        zone, json.charToAdd));
+            newTxt = _this.align(txt, startAt, zone, json.charToAdd);
+            newTxt = _this.cleanOptions(newTxt);
         } else if (format == "combine") {
-            obj.txt = _this.combine(txt);
+            newTxt = _this.combine(txt, startAt, zone);
+            obj.pointOfNoReturn = json.pointOfNoReturn;
         } else if (format == "subtitle") {
             obj.txt = _this.subtitle(txt);
         }
 
-        var obj = {
-            txt : newTxt.txt,
-            startAt : startAt
-        };
 
+        obj.txt = newTxt.txt;
         if (newTxt.options.length > 0) {
             let options = _this.manageOptions(newTxt.options, json);
             obj = {...obj, ...options};
@@ -74,7 +78,6 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         if (json.onTheBox) obj.onTheBox = true;
         if (json.noClearingSpace) obj.noClearingSpace = true;
         if (json.speed) obj.speed = json.speed;
-
 
         return obj;
     }
@@ -186,7 +189,57 @@ FormatJSON.prototype.align = function(txt, startAt, zone, adder) {
     return [...before, ...txt, ...after];
 
 };
-FormatJSON.prototype.combine = function(txt) {
+FormatJSON.prototype.combine = function(txts, startAt, zone) {
+
+    var _this = this;
+    var starters = [{prevTxt: 0, prevIndex: 0}];
+
+    var newTxts = [];
+
+    txts.forEach(function(txt, i) {
+        var t = "";
+
+        if (i != 0) {
+            var ref = starters[i];
+            t = newTxts[ref.prevTxt].substr(0, ref.prevIndex + 1);
+        }
+
+        while (txt.indexOf("{{index::") > -1) {
+            let openPos = txt.indexOf("{{index::");
+            let closePos = txt.indexOf("}}", openPos);
+            let iStarter = txt.substring(openPos +9, closePos);
+            txt = txt.substring(0, openPos) + txt.substr(closePos+2);
+            starters[iStarter] = {
+                prevTxt : i,
+                prevIndex : openPos + t.length
+            };
+        }
+
+        newTxts.push(t+txt);
+    });
+
+    var options = [];
+    newTxts.forEach(function(txt, i) {
+
+        var tag = "{{index::" + i + "}}";
+        var index = starters[i].prevIndex;
+        var newTxt = txt.substring(0, index) + tag + txt.substr(index);
+        newTxt = _this.splitTxt([newTxt], startAt, zone);
+        // FIXME so wut much wtf (modulate the cleaner to do this with it)
+        var cleaned = _this.cleanOptions(newTxt);
+        newTxts[i] = !Array.isArray(cleaned.txt) ? [cleaned.txt] : cleaned.txt;
+        if (!Array.isArray(cleaned.txt)) {
+            options.push(cleaned.options[0]);
+        } else {
+            options.push(cleaned.options[0][0]);
+        }
+    });
+
+    return {
+        txt: newTxts,
+        options: [options]
+    };
+
 };
 FormatJSON.prototype.subtitle = function(txt) {
 };
@@ -195,6 +248,8 @@ FormatJSON.prototype.cleanOptions = function(txt) {
 
     var options = [];
     var _this = this;
+
+    if(!Array.isArray(txt)) txt = [txt];
 
     txt.forEach(function(line, l) {
         if (line.indexOf("{{") > -1) {
@@ -209,6 +264,7 @@ FormatJSON.prototype.cleanOptions = function(txt) {
 
                 let opt = {};
                 optStr = optStr.split("::");
+
                 opt.type = optStr[0];
                 opt.options = optStr[1].split("|");
                 opt.value = opt.options.shift();
@@ -217,9 +273,6 @@ FormatJSON.prototype.cleanOptions = function(txt) {
                         openPos += _this.transfer[_this.i].startAt[0];
                     }
                     linePlus += _this.transfer[_this.i].startAt[1];
-                }
-                if (true) {
-
                 }
                 opt.pos = [openPos, l + linePlus];
 
@@ -231,8 +284,8 @@ FormatJSON.prototype.cleanOptions = function(txt) {
     });
 
     return {
-        txt: txt,
-        options: options
+        txt: txt.length == 1 ? txt[0] : txt,
+        options: txt.length == 1 ? options[0] : options
     }
 
 };
@@ -330,6 +383,10 @@ FormatJSON.prototype.manageOptions = function(options, json) {
             }
             else if (type == "start") {
                 _this.transfer[opt.value].startAt = opt.pos;
+            }
+            else if (type == "index") {
+                if (!o.hasOwnProperty("checkPoint")) o.checkPoint = [];
+                o.checkPoint[opt.value] = opt.pos;
             }
         });
     });

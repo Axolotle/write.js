@@ -449,6 +449,7 @@ Animation.prototype.init = function(obj, box) {
     if (obj.tags) this.tags = obj.tags;
     if (obj.checkPoint) this.checkPoint = obj.checkPoint;
     if (obj.endAt) this.endAt = obj.endAt;
+    if (obj.pointOfNoReturn) this.pointOfNoReturn = obj.pointOfNoReturn;
 
     this.startAt = obj.startAt || [0,0];
     this.altSpeed = obj.altSpeed || [];
@@ -456,7 +457,7 @@ Animation.prototype.init = function(obj, box) {
 
     // FIXME string to char on specific method
     this.txt = obj.txt;
-
+    console.log(obj);
     this.box = box;
     this.speed = obj.speed;
 
@@ -486,7 +487,7 @@ Animation.prototype.formatStringsToIndieChar = function(sentences) {
 };
 Animation.prototype.writeText = function(callback) {
     this.txt = this.formatStringsToIndieChar(this.txt);
-    
+
     var line = this.startAt[1];
     var index = this.onTheBox ? this.box.marginX * -1 : this.startAt[0];
 
@@ -591,11 +592,12 @@ Animation.prototype.addWord = function(removeListeners, callback) {
          });
     });
 
+    console.log(this.txt);
     var n = l = i = index = 0;
     var end = false;
     var check = false;
-    // use pause tag to define an line/index from where the user can't go back
-    var pointOfNoReturn = self.pause[0][0];
+
+    var pointOfNoReturn = this.checkPoint[this.pointOfNoReturn];
     var lastEnding = [];
 
     //FIXME jhfdjkhgskdjfhg
@@ -620,32 +622,32 @@ Animation.prototype.addWord = function(removeListeners, callback) {
     function crossOut(start, ending) {
         var tag = { "type" : "s" };
 
-        if (start[0] == ending[0]) {
-            tag.line = start[0];
-            if (start[1] == 0) {
+        if (start[1] == ending[1]) {
+            tag.line = start[1];
+            if (start[0] == 0) {
                 tag.open = 0;
             }
             else {
-                tag.open = start[1]+1;
+                tag.open = start[0]+1;
             }
-            tag.close = ending[1];
+            tag.close = ending[0];
             self.box.addTags(tag);
         }
         else {
-            for (var z = ending[0]; z >= start[0]; z--) {
+            for (var z = ending[1]; z >= start[1]; z--) {
                 tag.line = z;
-                if (z == start[0]) {
-                    if (start[1] == 0) {
+                if (z == start[1]) {
+                    if (start[0] == 0) {
                         tag.open = 0;
                     }
                     else {
-                        tag.open = start[1]+1;
+                        tag.open = start[0]+1;
                     }
                     tag.close = lastEnding[z]-1;
                 }
-                else if (z == ending[0]) {
+                else if (z == ending[1]) {
                     tag.open = 0;
-                    tag.close = ending[1];
+                    tag.close = ending[0];
                 }
                 else {
                     tag.open = 0;
@@ -676,10 +678,10 @@ Animation.prototype.addWord = function(removeListeners, callback) {
                     return;
                 }
                 // magically change the checkpoint if its index is the end of a line
-                if (self.checkPoint[n+1][1] >= lastEnding[self.checkPoint[n+1][0]]-1) {
-                    self.checkPoint[n+1] = [self.checkPoint[n+1][0]+1, 0]
+                if (self.checkPoint[n+1][0] >= lastEnding[self.checkPoint[n+1][1]]-1) {
+                    self.checkPoint[n+1] = [0, self.checkPoint[n+1][1]+1]
                 }
-                crossOut(self.checkPoint[n+1], [l, index-1]);
+                crossOut(self.checkPoint[n+1], [index-1, l]);
                 return;
             }
             else {
@@ -698,11 +700,11 @@ Animation.prototype.addWord = function(removeListeners, callback) {
             // print the next word
             self.box.printOnLine(l, index, nextWord);
 
-            if (l == self.checkPoint[n+1][0] && index >= self.checkPoint[n+1][1]) {
-                crossOut(self.checkPoint[n+1], [l,index+nextWord.length]);
+            if (l == self.checkPoint[n+1][1] && index >= self.checkPoint[n+1][0]) {
+                crossOut(self.checkPoint[n+1], [index+nextWord.length, l]);
             }
             else {
-                crossOut([l,0], [l,index+nextWord.length]);
+                crossOut([0,l], [index+nextWord.length, l]);
             }
         }
         else {
@@ -727,7 +729,7 @@ Animation.prototype.addWord = function(removeListeners, callback) {
 
 
         var lastWord = self.txt[n][l][i-1];
-        if (l == pointOfNoReturn[0] && index-lastWord.length-1 <= pointOfNoReturn[1]) {
+        if (l == pointOfNoReturn[1] && index-lastWord.length-1 <= pointOfNoReturn[0]) {
             return;
         }
         if (cor) {
@@ -755,20 +757,20 @@ Animation.prototype.addWord = function(removeListeners, callback) {
             self.box.printOnLine(l, 0, self.txt[n][l].slice(0,i).join(" "));
             self.box.printOnLine(l, index, getSpaces(lastWord.length));
             if (index > 0) {
-                if (l <= self.checkPoint[n+1][0] && index-1 <= self.checkPoint[n+1][1]) {
+                if (l <= self.checkPoint[n+1][1] && index-1 <= self.checkPoint[n+1][0]) {
                     end = false;
                     n++;
                 }
                 else {
-                    if (l == self.checkPoint[n+1][0] && index >= self.checkPoint[n+1][1]) {
-                        crossOut(self.checkPoint[n+1], [l,index-1]);
+                    if (l == self.checkPoint[n+1][1] && index >= self.checkPoint[n+1][0]) {
+                        crossOut(self.checkPoint[n+1], [index-1, l]);
                     }
                     else {
-                        crossOut([l,0], [l,index-1]);
+                        crossOut([0, l], [index-1, l]);
                     }
                 }
             }
-            else if (l <= self.checkPoint[n+1][0] && index-1 <= self.checkPoint[n+1][1]) {
+            else if (l <= self.checkPoint[n+1][1] && index-1 <= self.checkPoint[n+1][0]) {
                 if (self.txt[n+1][l-1].length != self.txt[n][l-1].length) {
                     // deal with the fucking checkpoint exception
                     end = false;
