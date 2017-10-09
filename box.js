@@ -292,7 +292,7 @@ Box.prototype.draw = function(callback) {
             var l = _this.lines.length;
             var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
             var repeatedLines = "─".repeat(actualX-2);
-            for (var i = 0; i < l; i++) {
+            for (let i = 0; i < l; i++) {
                 if (i == 0) {
                     _this.lines[i].innerHTML = "┌" + repeatedLines + "┐";
                 } else if (i == l-1) {
@@ -305,11 +305,10 @@ Box.prototype.draw = function(callback) {
 
         if (yStep > 0) {
             actualY += yStep;
-
             // Inserts new nodes and characters.
             var l = _this.lines.length - 1;
             var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
-            for (var i = 0; i < yStep; i++) {
+            for (let i = 0; i < yStep; i++) {
                 var elem = document.createElement("p");
                 elem.innerHTML = repeatedSpaces;
                 div.insertBefore(elem, div.lastChild)
@@ -321,7 +320,7 @@ Box.prototype.draw = function(callback) {
             yStep *= -1;
 
             // Removes nodes
-            for (var y = 0; y < yStep; y++) {
+            for (let y = 0; y < yStep; y++) {
                 div.removeChild(div.lastChild.previousElementSibling);
             }
             _this.lines.splice(_this.lines.length - 1 - yStep, yStep);

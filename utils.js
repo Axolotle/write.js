@@ -20,20 +20,14 @@ function FormatJSON(x, y, marginX, marginY) {
 FormatJSON.prototype.getNewJSON = function(JSONs) {
     /* Formats a given text so it can be displayed in the box with
        every informations needed by the animation's methods. */
-    var n = JSONs.length;
-    this.transfer = [];
-    for (let i = 0; i < n; i++) {
-        this.transfer.push([]);
-    }
 
-    // FIXME add onTheBox & dontAddY options
-    // FIXME add center x or/and y options
-    this.yZone = this.y - this.marginY * 2;
-    this.xZone = this.x - this.marginX * 2;
-    this.i = 0;
+    // FIXME Find a better way to reference the differents json in the methods
     var _this = this;
-
     var returnedObj = [];
+
+    this.transfer = Array(JSONs.length);
+    this.i = 0;
+
     if (JSONs.length > 1) {
         JSONs.forEach(function(json, i) {
             returnedObj.push(format(json, i));
@@ -43,48 +37,60 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         returnedObj = format(JSONs);
     }
 
-
     function format(json) {
-        var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
-        var obj = {};
-        // Applies the specified formatting to the text.
-        var format = json.format;
-        var transfer = _this.transfer[_this.i];
-        obj.startAt = transfer && transfer.startAt ? transfer.startAt : [0,0];
 
+        var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
+        var transfer = _this.transfer[_this.i];
+        var startAt = transfer && transfer.startAt ? transfer.startAt : [0,0];
+        var format = json.format;
+        var zone = {
+            x: json.onTheBox ? _this.x : _this.x - _this.marginX * 2,
+            y: _this.y - _this.marginY * 2
+        };
+        // FIXME add dontAddY options
+        // FIXME add center x or/and y options
+
+        var newTxt;
         if (format == undefined || format == "paragraph") {
-            let newTxt = _this.separateOptFromText(_this.splitTxt(txt, obj.startAt));
-            if (newTxt.options.length > 0) {
-                let options = _this.manageOptions(newTxt.options, json);
-                obj = {txt: newTxt.txt, ...options, ...obj};
-            }
+            newTxt = _this.cleanOptions(_this.splitTxt(txt, startAt, zone));
         } else if (format == "align") {
-            let newTxt = _this.separateOptFromText(_this.align(txt, json.charToAdd));
-            if (newTxt.options.length > 0) {
-                let options = _this.manageOptions(newTxt.options, json);
-                obj = {txt: newTxt.txt, ...options, ...obj};
-            }
+            newTxt = _this.cleanOptions(_this.align(txt, startAt,
+                                        zone, json.charToAdd));
         } else if (format == "combine") {
             obj.txt = _this.combine(txt);
         } else if (format == "subtitle") {
             obj.txt = _this.subtitle(txt);
         }
 
+        var obj = {
+            txt : newTxt.txt,
+            startAt : startAt
+        };
+
+        if (newTxt.options.length > 0) {
+            let options = _this.manageOptions(newTxt.options, json);
+            obj = {...obj, ...options};
+        }
+        if (json.onTheBox) obj.onTheBox = true;
+        if (json.noClearingSpace) obj.noClearingSpace = true;
+        if (json.speed) obj.speed = json.speed;
+
+
         return obj;
     }
 
     return returnedObj;
-}
-FormatJSON.prototype.splitTxt = function(txt, startAt) {
-    /* Splits lines if its length higher than the box width. */
 
+};
+FormatJSON.prototype.splitTxt = function(txt, startAt, zone) {
+    /* Splits lines if its length higher than the box width. */
     // Defines characters that should'nt be the first or the last
     // character of a line
     var nvrFirst = ["?", "!", ":", ";", "»"];
     var nvrLast = ["¿", "¡", "«"];
     var _this = this;
     var txtLength = txt.length;
-    var xZone = this.xZone;
+    var xZone = zone.x;
 
     function splitting(starter) {
         // Defines an index variable that contains tags length
@@ -135,6 +141,13 @@ FormatJSON.prototype.splitTxt = function(txt, startAt) {
     }
 
     for (var l = 0; l < txtLength; l++) {
+        if (txt[l].indexOf("\n") > -1) {
+            let split = txt[l].indexOf("\n");
+            txt.splice(l + 1, 0, txt[l].substr(split+1));
+            txt[l] = txt[l].substring(0, split);
+            txtLength++;
+        }
+
         if (l == 0 && startAt && txt[l].length > xZone) {
             splitting(startAt[0]);
         }
@@ -146,16 +159,16 @@ FormatJSON.prototype.splitTxt = function(txt, startAt) {
     return txt;
 
 };
-FormatJSON.prototype.align = function(txt, adder) {
+FormatJSON.prototype.align = function(txt, startAt, zone, adder) {
     /* Formats the text by aligning it to the specified direction */
 
-    var xZone = this.xZone;
-    var yZone = this.yZone;
+    var xZone = zone.x;
+    var yZone = zone.y;
 
     var yToAdd = yZone - txt.length;
     var xToAdd;
 
-    txt = this.splitTxt(txt);
+    txt = this.splitTxt(txt, startAt, zone);
 
     var _this = this;
     txt.forEach(function(line, index) {
@@ -177,7 +190,7 @@ FormatJSON.prototype.combine = function(txt) {
 };
 FormatJSON.prototype.subtitle = function(txt) {
 };
-FormatJSON.prototype.separateOptFromText = function(txt) {
+FormatJSON.prototype.cleanOptions = function(txt) {
     /* Separates the texts from the option's tags and returns it as an object */
 
     var options = [];
@@ -195,7 +208,7 @@ FormatJSON.prototype.separateOptFromText = function(txt) {
                 line = line.substring(0, openPos) + line.substr(closePos);
 
                 let opt = {};
-                optStr = optStr.split(":");
+                optStr = optStr.split("::");
                 opt.type = optStr[0];
                 opt.options = optStr[1].split("|");
                 opt.value = opt.options.shift();
@@ -314,7 +327,6 @@ FormatJSON.prototype.manageOptions = function(options, json) {
                         o.cleanAt[iClean][3] = opt.options[1] || 15/2;
                     }
                 }
-                if (!o.hasOwnProperty("cleanAt")) o.cleanAt = [];
             }
             else if (type == "start") {
                 _this.transfer[opt.value].startAt = opt.pos;

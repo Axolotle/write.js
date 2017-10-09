@@ -486,9 +486,9 @@ Animation.prototype.formatStringsToIndieChar = function(sentences) {
 };
 Animation.prototype.writeText = function(callback) {
     this.txt = this.formatStringsToIndieChar(this.txt);
-
-    var line = this.startAt[1] || 0;
-    var index =  this.startAt[0] || 0;
+    
+    var line = this.startAt[1];
+    var index = this.onTheBox ? this.box.marginX * -1 : this.startAt[0];
 
     var l = 0;
     var i = 0;
@@ -516,6 +516,12 @@ Animation.prototype.writeText = function(callback) {
 
             if (shift == undefined) {
                 if (l >= self.txt.length - 1) {
+                    if (self.tags) {
+                        let plus = self.onTheBox ? self.box.marginX * -1 : 0;
+                        self.tags.forEach(function(tag) {
+                            self.box.printOnLine(tag.line, tag.index+plus, tag.content, true);
+                        })
+                    }
                     if (callback)
                         callback();
                         return;
@@ -847,9 +853,10 @@ Animation.prototype.clean = function(pos, callback) {
 };
 Animation.prototype.reversedClean = function(pos, callback) {
     var cleanAt = this.cleanAt[pos] || this.cleanAt[0];
-    var line = cleanAt[1][0];
-    var index = cleanAt[1][1];
+    var line = cleanAt[1][1];
+    var index = cleanAt[1][0];
     var char = cleanAt[2];
+    var speed = cleanAt[3];
 
     var self = this;
     var cleaningPage = setInterval(function() {
@@ -867,7 +874,7 @@ Animation.prototype.reversedClean = function(pos, callback) {
             self.box.printOnLine(line, index--, char);
         }
 
-    }, self.cleanSpeed);
+    }, speed);
 
 };
 Animation.prototype.startSubtitles = function(callback) {
