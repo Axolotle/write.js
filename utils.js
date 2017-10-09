@@ -38,7 +38,6 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
     }
 
     function format(json) {
-        console.log(json);
         var txt = Array.isArray(json.txt) ? json.txt : [json.txt];
         var transfer = _this.transfer[_this.i];
         var startAt = transfer && transfer.startAt ? transfer.startAt : [0,0];
@@ -66,7 +65,9 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
             newTxt = _this.combine(txt, startAt, zone);
             obj.pointOfNoReturn = json.pointOfNoReturn;
         } else if (format == "subtitle") {
-            obj.txt = _this.subtitle(txt);
+            return {
+                txt: _this.subtitle(txt)
+            }
         }
 
 
@@ -241,7 +242,123 @@ FormatJSON.prototype.combine = function(txts, startAt, zone) {
     };
 
 };
-FormatJSON.prototype.subtitle = function(txt) {
+FormatJSON.prototype.subtitle = function(input) {
+
+    var _this = this;
+
+    function convertToMillisecond(srtString) {
+        var splittedStr = srtString.split(":").reverse();
+        var multi = 1000;
+
+        var ms = splittedStr.reduce(function(a,b) {
+            if (typeof a == "string" && a.indexOf(".") > -1) {
+                a = parseFloat(a)*multi;
+            }
+            b = parseInt(b);
+            multi *= 60;
+
+            return a + b*multi;
+        });
+
+        return ms;
+    }
+
+    function getPos(position, lineLength, secondLine) {
+        var posX = Math.floor((_this.x-_this.marginX*2)*(position[0]/100)) - Math.floor(lineLength/2);
+        var posY = Math.floor((_this.y-_this.marginY*2-1)*(position[1]/100));
+
+        return [posY, posX];
+    }
+
+    var txts = [];
+
+    input.forEach(function(subtitle) {
+        var data = {};
+
+        let timing = subtitle[0];
+        let txt = subtitle[1];
+
+        var place = subtitle[3] || [50,100];
+
+        for (var i = 0; i < txt.length; i++) {
+            txt[i] = " "+txt[i]+" ";
+        }
+
+        data.start = typeof timing[0] === "string" ? convertToMillisecond(timing[0]) : timing[0];
+        data.end = typeof timing[1] === "string" ? convertToMillisecond(timing[1]) : timing[1];
+
+        data.pos = [];
+        if (txt.length > 1) {
+            let pos1, pos2;
+
+            pos1 = getPos(place, txt[0].length);
+            pos2 = getPos(place, txt[1].length);
+
+            if (place[1] <= 50) {
+                pos2[0] += 1;
+            }
+            else {
+                pos1[0] -= 1;
+            }
+
+            // correct x position if position is outside the box
+            if (pos1[1] < 0 || pos2[1] < 0) {
+                if (txt[0].length > txt[1].length) {
+                    pos2[1] += pos1[1] * -1;
+                    pos1[1] += pos1[1] * -1;
+                }
+                else {
+                    pos1[1] += pos2[1] * -1;
+                    pos2[1] += pos2[1] * -1;
+                }
+            }
+            else if (pos1[1]+txt[0].length > _this.x-_this.marginX*2 || pos2[1]+txt[1].length > _this.x-_this.marginX*2){
+                let boxW = _this.x-_this.marginX*2;
+                if (txt[0].length > txt[1].length) {
+                    let adder = boxW - (pos1[1]+txt[0].length);
+                    pos2[1] += adder;
+                    pos1[1] += adder;
+                }
+                else {
+                    let adder = boxW - (pos2[1]+txt[1].length);
+                    pos1[1] += adder;
+                    pos2[1] += adder;
+                }
+
+
+            }
+
+            data.pos.push(pos1, pos2);
+        }
+        else {
+            data.pos.push(getPos(place, txt[0].length));
+
+            if (data.pos[0][1]+txt[0].length > _this.x-_this.marginX*2) {
+                data.pos[0][1] += (_this.x-_this.marginX*2) - (data.pos[0][1]+txt[0].length);
+            }
+        }
+
+
+        data.txt = txt;
+
+        if (subtitle[2] != undefined) {
+            data.tags = [];
+            data.pos.forEach(function(posArray, i) {
+                let tag = {};
+                tag.type = "span";
+                tag.class = "sub " + subtitle[2];
+                tag.line = posArray[0];
+                tag.open = posArray[1];
+                tag.close = posArray[1] + data.txt[i].length;
+
+                data.tags.push(tag);
+            })
+
+        }
+        txts.push(data);
+    });
+
+    return txts;
 };
 FormatJSON.prototype.cleanOptions = function(txt) {
     /* Separates the texts from the option's tags and returns it as an object */
@@ -336,7 +453,7 @@ FormatJSON.prototype.manageOptions = function(options, json) {
             else if (type == "speed") {
                 if (!o.hasOwnProperty("altSpeed")) o.altSpeed = [];
                 if (!o.hasOwnProperty("speed")) {
-                    o.speed = json.hasOwnProperty("speed") ? json.speed : 15;
+                    o.speed = json.hasOwnProperty("speed") ? json.speed : 70;
                 }
                 let speed = (parseFloat(opt.value) * -1) * 20 + o.speed;
                 if (speed < 0) speed = 0;
@@ -377,7 +494,7 @@ FormatJSON.prototype.manageOptions = function(options, json) {
                         }
                         o.cleanAt[iClean][0] = opt.pos;
                         o.cleanAt[iClean][2] = chara;
-                        o.cleanAt[iClean][3] = opt.options[1] || 15/2;
+                        o.cleanAt[iClean][3] = opt.options[1] || 35;
                     }
                 }
             }

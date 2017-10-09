@@ -457,7 +457,6 @@ Animation.prototype.init = function(obj, box) {
 
     // FIXME string to char on specific method
     this.txt = obj.txt;
-    console.log(obj);
     this.box = box;
     this.speed = obj.speed;
 
@@ -592,7 +591,6 @@ Animation.prototype.addWord = function(removeListeners, callback) {
          });
     });
 
-    console.log(this.txt);
     var n = l = i = index = 0;
     var end = false;
     var check = false;
