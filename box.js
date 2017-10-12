@@ -1,16 +1,3 @@
-function readJSONFile(file, callback) {
-    var rawFile = new XMLHttpRequest();
-    rawFile.overrideMimeType("application/json");
-    rawFile.open("GET", file, true);
-    rawFile.onreadystatechange = function() {
-        if (rawFile.readyState === 4 && rawFile.status == "200") {
-            callback(rawFile.responseText);
-        }
-    }
-    rawFile.send(null);
-}
-
-
 function Box() {
     // Define base information
     this.x = 0;
@@ -237,9 +224,11 @@ Box.prototype.display = function(callback) {
     if (callback) callback();
 
 };
-Box.prototype.draw = function(callback) {
+Box.prototype.draw = function() {
     /* Animation of the display of the box from previous size or scratch
        to the needed size in a given time. */
+
+    return new Promise ((resolve, reject) => {
 
     var div = document.getElementById(this.div);
     var _this = this;
@@ -330,11 +319,13 @@ Box.prototype.draw = function(callback) {
             requestAnimationFrame(draw);
         }
         else {
-            if (callback) callback();
+            resolve();
         }
     }
 
     requestAnimationFrame(draw);
+
+    });
 
 };
 Box.prototype.reboot = function(callback) {

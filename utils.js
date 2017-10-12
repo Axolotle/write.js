@@ -1,13 +1,16 @@
-function readJSONFile(file, callback) {
-    var rawFile = new XMLHttpRequest();
-    rawFile.overrideMimeType("application/json");
-    rawFile.open("GET", file, true);
-    rawFile.onreadystatechange = function() {
-        if (rawFile.readyState === 4 && rawFile.status == "200") {
-            callback(rawFile.responseText);
+function readJSONFile(url) {
+    return new Promise((resolve, reject) => {
+        var rawFile = new XMLHttpRequest();
+        rawFile.overrideMimeType("application/json");
+        rawFile.open("GET", url);
+        rawFile.onload = () => {
+            if (rawFile.readyState === 4 && rawFile.status == "200") {
+                resolve(JSON.parse(rawFile.responseText));
+            }
         }
-    }
-    rawFile.send(null);
+        rawFile.onerror = () => reject("Couldn't find " + url);
+        rawFile.send();
+    });
 }
 
 function FormatJSON(x, y, marginX, marginY) {
@@ -283,6 +286,7 @@ FormatJSON.prototype.subtitle = function(input) {
         let txt = subtitle[1];
 
         var place = subtitle[3] || [50,100];
+        var more = subtitle[4] || 0;
 
         for (var i = 0; i < txt.length; i++) {
             txt[i] = " "+txt[i]+" ";
@@ -331,6 +335,8 @@ FormatJSON.prototype.subtitle = function(input) {
 
 
             }
+            pos1[0] += more;
+            pos2[0] += more;
 
             data.pos.push(pos1, pos2);
         }
@@ -340,6 +346,7 @@ FormatJSON.prototype.subtitle = function(input) {
             if (data.pos[0][1]+txt[0].length > _this.x-_this.marginX*2) {
                 data.pos[0][1] += (_this.x-_this.marginX*2) - (data.pos[0][1]+txt[0].length);
             }
+            data.pos[0][0] += more;
         }
 
 

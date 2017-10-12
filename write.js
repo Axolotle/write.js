@@ -44,6 +44,8 @@ Animation.prototype.formatStringsToIndieChar = function(sentences) {
 
 };
 Animation.prototype.writeText = function(callback) {
+    return new Promise ((resolve, reject) => {
+
     this.txt = this.formatStringsToIndieChar(this.txt);
 
     var line = this.startAt[1];
@@ -51,7 +53,7 @@ Animation.prototype.writeText = function(callback) {
 
     var l = 0;
     var i = 0;
-    var speed = this.speed || 15;
+    var speed = this.speed || 70;
 
     var self = this;
     var write = function() {
@@ -81,9 +83,7 @@ Animation.prototype.writeText = function(callback) {
                             self.box.printOnLine(tag.line, tag.index+plus, tag.content, true);
                         })
                     }
-                    if (callback)
-                        callback();
-                        return;
+                    resolve();
                 }
                 else {
                     self.cleanEndOfLine(line, index, " ");
@@ -119,8 +119,10 @@ Animation.prototype.writeText = function(callback) {
     }
     write();
 
+});
+
 };
-Animation.prototype.appendText = function(callback) {
+Animation.prototype.appendText = function() {
     var self = this;
     this.txt.forEach(function(line, i) {
         self.box.printOnLine(i, 0, line);
@@ -130,9 +132,6 @@ Animation.prototype.appendText = function(callback) {
         self.tags.forEach(function(tag) {
             self.box.printOnLine(tag.line, tag.index, tag.content, true);
         })
-    }
-    if (callback) {
-        callback();
     }
 };
 Animation.prototype.addWord = function(removeListeners, callback) {
