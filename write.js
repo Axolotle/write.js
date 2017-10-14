@@ -1,28 +1,11 @@
-function Animation(obj, box) {
-    this.init(obj, box);
-}
-Animation.prototype.init = function(obj, box) {
-    if (obj.cleanAt) this.cleanAt = obj.cleanAt;
-    if (obj.noClearingSpace) this.noClearingSpace = obj.noClearingSpace;
-    if (obj.onTheBox) this.onTheBox = true;
-    if (obj.tags) this.tags = obj.tags;
-    if (obj.checkPoint) this.checkPoint = obj.checkPoint;
-    if (obj.endAt) this.endAt = obj.endAt;
-    if (obj.pointOfNoReturn) this.pointOfNoReturn = obj.pointOfNoReturn;
-
-    this.startAt = obj.startAt || [0,0];
-    this.altSpeed = obj.altSpeed || [];
-    this.pause = obj.pause || [];
-
-    // FIXME string to char on specific method
-    this.txt = obj.txt;
-    this.box = box;
-    this.speed = obj.speed;
+function Animation(obj) {
+    Object.assign(this, obj);
 
     // define stop attribut and listener that will stop any running function
     this.stop = false;
     this.stopListener();
-};
+    console.log(this);
+}
 Animation.prototype.stopListener = function() {
     // Generic stop method triggering the clearInterval of timed animation
     // Events dependant methods still needs to listen to the stop event
@@ -122,16 +105,17 @@ Animation.prototype.writeText = function(callback) {
 });
 
 };
-Animation.prototype.appendText = function() {
-    var self = this;
-    this.txt.forEach(function(line, i) {
-        self.box.printOnLine(i, 0, line);
+Animation.prototype.appendText = function(box) {
+    const t = this;
+
+    t.txt.forEach(function(line, i) {
+        box.printOnLine(i, 0, line);
     });
 
-    if (self.tags) {
-        self.tags.forEach(function(tag) {
-            self.box.printOnLine(tag.line, tag.index, tag.content, true);
-        })
+    if (t.tags) {
+        t.tags.forEach(function(tag) {
+            box.printOnLine(tag.line, tag.index, tag.content, true);
+        });
     }
 };
 Animation.prototype.addWord = function(removeListeners, callback) {

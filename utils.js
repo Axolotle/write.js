@@ -13,6 +13,16 @@ function readJSONFile(url) {
     });
 }
 
+function getFormatedObjs(url) {
+    return new Promise((resolve, reject) => {
+        readJSONFile(url).then(JSONs => {
+            box.init(JSONs.shift());
+            const formatter = new FormatJSON(box.x, box.y, box.marginX, box.marginY);
+            resolve(formatter.getNewJSON(JSONs));
+        });
+    });
+}
+
 function FormatJSON(x, y, marginX, marginY) {
     this.x = x;
     this.y = y;
