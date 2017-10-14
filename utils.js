@@ -465,7 +465,7 @@ FormatJSON.prototype.manageOptions = function(options, json) {
             }
             else if (type == "pause") {
                 if (!o.hasOwnProperty("pause")) o.pause = [];
-                let pause = [[opt.pos[1],opt.pos[0]], opt.value*1000];
+                let pause = [opt.pos, opt.value*1000];
                 o.pause.push(pause)
             }
             else if (type == "speed") {
@@ -475,7 +475,7 @@ FormatJSON.prototype.manageOptions = function(options, json) {
                 }
                 let speed = (parseFloat(opt.value) * -1) * 20 + o.speed;
                 if (speed < 0) speed = 0;
-                let speedChange = [[opt.pos[1],opt.pos[0]], speed];
+                let speedChange = [opt.pos, speed];
                 o.altSpeed.push(speedChange);
             }
             else if (type == "clean") {

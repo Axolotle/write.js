@@ -4,7 +4,6 @@ function Animation(obj) {
     // define stop attribut and listener that will stop any running function
     this.stop = false;
     this.stopListener();
-    console.log(this);
 }
 Animation.prototype.stopListener = function() {
     // Generic stop method triggering the clearInterval of timed animation
@@ -18,102 +17,107 @@ Animation.prototype.stopListener = function() {
 
     window.addEventListener("stop", stop);
 };
-Animation.prototype.formatStringsToIndieChar = function(sentences) {
-    var t = sentences.map(function(sentence) {
-        return sentence.split("");
-    });
 
-    return t;
-
-};
-Animation.prototype.writeText = function(callback) {
+Animation.prototype.writeText = function(box) {
     return new Promise ((resolve, reject) => {
+        const _this = this;
 
-    this.txt = this.formatStringsToIndieChar(this.txt);
+        // Splits each texts in individual characters
+        _this.txt = _this.txt.map((sentence) => { return sentence.split("")});
 
-    var line = this.startAt[1];
-    var index = this.onTheBox ? this.box.marginX * -1 : this.startAt[0];
+        var line = _this.startAt[1];
+        var index = _this.onTheBox ? box.marginX * -1 : _this.startAt[0];
 
-    var l = 0;
-    var i = 0;
-    var speed = this.speed || 70;
+        var l = 0;
+        var i = 0;
+        var speed = _this.speed || 70;
 
-    var self = this;
-    var write = function() {
-        if (self.stop) {
-            return;
+        var pause = _this.hasOwnProperty("pause") ? _this.pause.shift() : false;
+        var altSpeed = _this.hasOwnProperty("altSpeed") ? _this.altSpeed.shift() : false;
+
+        //var start = null;
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
-        if (self.pause[0] != undefined && l == self.pause[0][0][0] && index == self.pause[0][0][1]) {
-            var pause = self.pause.shift();
-            if (pause != undefined) {
-                setTimeout(write, pause[1]);
+
+        async function writing(timeStamp) {
+            // if (start === null) start = timeStamp;
+            // var timeSpent = timeStamp - start;
+            // start = timeStamp;
+
+            if (_this.stop) reject("User triggered a stop event");
+
+            else if (pause && index == pause[0][0] && l == pause[0][1]) {
+                await sleep(pause[1]);
+                if (_this.pause[0] != undefined) pause = _this.pause.shift();
+                else pause = false;
+                requestAnimationFrame(writing);
+                return;
             }
-        }
-        else {
-                if (self.altSpeed[0] != undefined && l == self.altSpeed[0][0][0] && index == self.altSpeed[0][0][1]) {
-                    speed = self.altSpeed[0][1];
-                    self.altSpeed.shift();
+            else {
+                if (altSpeed && index == altSpeed[0][0] && l == altSpeed[0][1]) {
+                    speed = altSpeed;
+                    if (_this.altSpeed[0] != undefined) altSpeed = _this.altSpeed.shift();
+                    else altSpeed = false;
                 }
+                if (_this.txt[l][0] != undefined) {
+                    let chara = _this.txt[l].shift();
 
-            var shift = self.txt[l].shift();
-
-
-            if (shift == undefined) {
-                if (l >= self.txt.length - 1) {
-                    if (self.tags) {
-                        let plus = self.onTheBox ? self.box.marginX * -1 : 0;
-                        self.tags.forEach(function(tag) {
-                            self.box.printOnLine(tag.line, tag.index+plus, tag.content, true);
-                        })
+                    if (chara == "\\") {
+                        if (index == 0) {
+                            requestAnimationFrame(writing);
+                            return;
+                        } else {
+                            chara = " ";
+                        }
                     }
-                    resolve();
+                    if (chara == " " && _this.noClearingSpace) {
+                        requestAnimationFrame(writing);
+                        index++;
+                        return;
+                    }
+
+                    box.printOnLine(line, index, chara);
+                    index++;
+                    await sleep(speed);
+                    requestAnimationFrame(writing);
                 }
                 else {
-                    self.cleanEndOfLine(line, index, " ");
-                    line++;
-                    l++;
-                    index = 0;
-                    if (self.onTheBox) {
-                        index -= self.box.marginX;
+                    if (l >= _this.txt.length - 1) {
+                        if (_this.tags) {
+                            let adder = _this.onTheBox ? box.marginX * -1 : 0;
+                            _this.tags.forEach(tag => {
+                                box.printOnLine(tag.line, tag.index+adder, tag.content, true);
+                            });
+                        }
+
+                        resolve();
+                    }
+                    else {
+                        _this.cleanEndOfLine(line, index, " ", box);
+                        line++;
+                        l++;
+                        index = _this.onTheBox ? box.marginX * -1 : 0;
+                        requestAnimationFrame(writing);
                     }
                 }
-                setTimeout(write, speed);
-                return;
             }
-            if (shift == "\\") {
-                if (index == 0) {
-                    setTimeout(write, speed);
-                    return;
-                }
-                else shift = " ";
-            }
-            if (shift == " " && self.noClearingSpace) {
-                setTimeout(write, speed);
-                index++;
-                return;
-            }
-            self.box.printOnLine(line, index, shift);
-
-            index++;
-            setTimeout(write, speed);
-
         }
 
-    }
-    write();
+        requestAnimationFrame(writing);
 
-});
-
-};
-Animation.prototype.appendText = function(box) {
-    const t = this;
-
-    t.txt.forEach(function(line, i) {
-        box.printOnLine(i, 0, line);
     });
 
-    if (t.tags) {
-        t.tags.forEach(function(tag) {
+};
+Animation.prototype.displayText = function(box) {
+    const _this = this;
+
+    _this.txt.forEach((line, i) => box.printOnLine(i, 0, line));
+
+    if (_this.tags) {
+        // FIXME rework the tag stuff
+        _this.tags.forEach((tag) => {
             box.printOnLine(tag.line, tag.index, tag.content, true);
         });
     }
@@ -334,14 +338,14 @@ Animation.prototype.addWord = function(removeListeners, callback) {
         }
     }
 };
-Animation.prototype.cleanEndOfLine = function(line, index, char) {
+Animation.prototype.cleanEndOfLine = function(line, index, char, box) {
     var self = this;
     var cleaning = setInterval(function() {
-        if (index >= self.box.x - self.box.marginX*2) {
+        if (index >= box.x - box.marginX*2) {
             clearInterval(cleaning);
             return;
         }
-        self.box.printOnLine(line, index++, char);
+        box.printOnLine(line, index++, char);
     }, 10);
 
 };
