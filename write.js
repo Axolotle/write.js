@@ -8,19 +8,19 @@ function Animation(obj) {
 Animation.prototype.stopListener = function() {
     // Generic stop method triggering the clearInterval of timed animation
     // Events dependant methods still needs to listen to the stop event
-    var self = this;
+    const _this = this;
 
     function stop() {
-        self.stop = true;
+        _this.stop = true;
         window.removeEventListener("stop", stop);
     }
 
     window.addEventListener("stop", stop);
 };
-
 Animation.prototype.writeText = function(box) {
     return new Promise ((resolve, reject) => {
         const _this = this;
+        // FIXME try to get a better controlled frame rate
 
         // Splits each texts in individual characters
         _this.txt = _this.txt.map((sentence) => { return sentence.split("")});
@@ -30,22 +30,16 @@ Animation.prototype.writeText = function(box) {
 
         var l = 0;
         var i = 0;
-        var speed = _this.speed || 70;
+        var speed = _this.speed != undefined ? _this.speed : 70;
 
         var pause = _this.hasOwnProperty("pause") ? _this.pause.shift() : false;
         var altSpeed = _this.hasOwnProperty("altSpeed") ? _this.altSpeed.shift() : false;
-
-        //var start = null;
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
-        async function writing(timeStamp) {
-            // if (start === null) start = timeStamp;
-            // var timeSpent = timeStamp - start;
-            // start = timeStamp;
-
+        async function writing() {
             if (_this.stop) reject("User triggered a stop event");
 
             else if (pause && index == pause[0][0] && l == pause[0][1]) {
@@ -80,7 +74,10 @@ Animation.prototype.writeText = function(box) {
 
                     box.printOnLine(line, index, chara);
                     index++;
-                    await sleep(speed);
+                    console.log(speed);
+                    if (speed != 0) {
+                        await sleep(speed);
+                    }
                     requestAnimationFrame(writing);
                 }
                 else {
@@ -91,7 +88,6 @@ Animation.prototype.writeText = function(box) {
                                 box.printOnLine(tag.line, tag.index+adder, tag.content, true);
                             });
                         }
-
                         resolve();
                     }
                     else {

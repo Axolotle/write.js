@@ -8,17 +8,23 @@ function readJSONFile(url) {
                 resolve(JSON.parse(rawFile.responseText));
             }
         }
-        rawFile.onerror = () => reject("Couldn't find " + url);
+        rawFile.onerror = () => reject("Couldn't find '" + url +"'");
         rawFile.send();
     });
 }
 
-function getFormatedObjs(url) {
+function getAnimationObjects(url) {
     return new Promise((resolve, reject) => {
-        readJSONFile(url).then(JSONs => {
-            box.init(JSONs.shift());
+        readJSONFile(url)
+        .then(json => {
+            box.init(json.shift());
             const formatter = new FormatJSON(box.x, box.y, box.marginX, box.marginY);
-            resolve(formatter.getNewJSON(JSONs));
+            json = formatter.getNewJSON(json);
+            var txtAnim = [];
+            json.forEach(function(obj) {
+                txtAnim.push(new Animation(obj, box));
+            });
+            resolve(txtAnim);
         });
     });
 }
@@ -90,8 +96,7 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         }
         if (json.onTheBox) obj.onTheBox = true;
         if (json.noClearingSpace) obj.noClearingSpace = true;
-        if (json.speed) obj.speed = json.speed;
-
+        if (json.speed != undefined) obj.speed = json.speed;
         return obj;
     }
 
