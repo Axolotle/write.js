@@ -51,7 +51,7 @@ Animation.prototype.writeText = function(box) {
             }
             else {
                 if (altSpeed && index == altSpeed[0][0] && l == altSpeed[0][1]) {
-                    speed = altSpeed;
+                    speed = altSpeed[1];
                     if (_this.altSpeed[0] != undefined) altSpeed = _this.altSpeed.shift();
                     else altSpeed = false;
                 }
@@ -74,7 +74,6 @@ Animation.prototype.writeText = function(box) {
 
                     box.printOnLine(line, index, chara);
                     index++;
-                    console.log(speed);
                     if (speed != 0) {
                         await sleep(speed);
                     }
@@ -100,11 +99,8 @@ Animation.prototype.writeText = function(box) {
                 }
             }
         }
-
         requestAnimationFrame(writing);
-
     });
-
 };
 Animation.prototype.displayText = function(box) {
     const _this = this;
@@ -128,9 +124,9 @@ Animation.prototype.addWord = function(removeListeners, callback) {
     var self = this;
 
     this.txt.forEach(function(txts, i) {
-         txts.forEach(function(sentences, j) {
-             self.txt[i][j] = sentences.split(" ");
-         });
+        txts.forEach(function(sentences, j) {
+            self.txt[i][j] = sentences.split(" ");
+        });
     });
 
     var n = l = i = index = 0;
@@ -345,79 +341,67 @@ Animation.prototype.cleanEndOfLine = function(line, index, char, box) {
     }, 10);
 
 };
-Animation.prototype.clean = function(pos, callback) {
+Animation.prototype.clean = function(box, pos, reverse) {
+    return new Promise ((resolve, reject) => {
+        const _this = this;
 
-    var cleanAt = this.cleanAt[pos] || this.cleanAt[0];
-    var line = cleanAt[0][1];
-    var index = cleanAt[0][0];
-    var char,
-        chars;
-
-    var speed = cleanAt[3];
-
-    if (cleanAt[2].length > 1) chars = cleanAt[2].split("");
-    else char = cleanAt[2];
-
-    var self = this;
-    var cleaningPage = setInterval(function() {
-        if (self.stop) {
-            clearInterval(cleaningPage);
-            return;
+        if (pos === "reverse") {
+            reverse = true;
+            pos = 0;
         }
-        // if multiple characters are given to the method, it will display a random one (with more chance to display the first one)
-        if (chars != undefined) {
-            let rand = Math.random() * (chars.length-1);
+        const cleanAt = this.cleanAt[pos] || this.cleanAt[0];
+        const chara = cleanAt[2].length > 1 ? cleanAt[2].split("") : cleanAt[2];
+        const speed = cleanAt[3];
 
-            if (rand < 0.5) {
-                char = chars[0];
+        var line = reverse ? cleanAt[1][0] : cleanAt[0][0];
+        var index = reverse ?  cleanAt[1][1] : cleanAt[0][1];
+
+        console.log(reverse);
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function cleaning() {
+            if (_this.stop) reject("User triggered a stop event");
+
+            if (reverse) {
+                if (line == 0 && index < 0) {
+                    resolve();
+                    return;
+                }
+                if (index < 0) {
+                    line--;
+                    index = box.x - box.marginX*2 -1;
+                }
+            } else {
+                if (line >= cleanAt[1][1] && index >= cleanAt[1][0]) {
+                    resolve();
+                    return;
+                }
+                if (index >= box.x - box.marginX*2) {
+                    line++;
+                    index = 0;
+                }
             }
-            else {
-                char = chars[1];
+
+            var char;
+            if (Array.isArray(chara)) {
+                let rand = Math.random();
+                if (rand < 0.5) char = chara[0];
+                else char = chara[1];
+            } else {
+                char = chara;
             }
-        }
-        // clear the interval at specified line/index
-        if (line >= cleanAt[1][1] && index >= cleanAt[1][0]) {
-            clearInterval(cleaningPage);
-            if (callback) callback();
-        }
-        else if (index >= self.box.x - self.box.marginX*2) {
-            line++;
-            index = 0;
-        }
-        else {
-            if (char === "\\") char = " ";
-            self.box.printOnLine(line, index++, char);
+
+            await sleep(speed);
+            box.printOnLine(line, index, char);
+            index += reverse ? -1 : 1;
+            requestAnimationFrame(cleaning);
         }
 
+        requestAnimationFrame(cleaning);
 
-    }, speed);
-
-};
-Animation.prototype.reversedClean = function(pos, callback) {
-    var cleanAt = this.cleanAt[pos] || this.cleanAt[0];
-    var line = cleanAt[1][1];
-    var index = cleanAt[1][0];
-    var char = cleanAt[2];
-    var speed = cleanAt[3];
-
-    var self = this;
-    var cleaningPage = setInterval(function() {
-        // clear the interval at specified line/index
-        if (line == 0 && index < 0) {
-            clearInterval(cleaningPage);
-            if (callback) callback();
-        }
-        else if (index < 0) {
-            line--;
-            index = self.box.x - self.box.marginX - "</br>".length+1;
-        }
-        else {
-            if (char === "\\") char = " ";
-            self.box.printOnLine(line, index--, char);
-        }
-
-    }, speed);
-
+    });
 };
 Animation.prototype.startSubtitles = function(callback) {
 
