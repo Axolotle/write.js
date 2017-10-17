@@ -359,8 +359,8 @@ Animation.prototype.clean = function(box, pos, reverse) {
         const chara = cleanAt[2].length > 1 ? cleanAt[2].split("") : cleanAt[2];
         const speed = cleanAt[3];
 
-        var line = reverse ? cleanAt[1][0] : cleanAt[0][0];
-        var index = reverse ?  cleanAt[1][1] : cleanAt[0][1];
+        var line = reverse ? cleanAt[1][1] : cleanAt[0][1];
+        var index = reverse ?  cleanAt[1][0] : cleanAt[0][0];
 
         async function cleaning() {
             if (_this.stop) reject("User triggered a stop event");
