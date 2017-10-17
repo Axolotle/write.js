@@ -17,10 +17,14 @@ Animation.prototype.stopListener = function() {
 
     window.addEventListener("stop", stop);
 };
+Animation.prototype.sleep = function(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
 Animation.prototype.writeText = function(box) {
     return new Promise ((resolve, reject) => {
         const _this = this;
         // FIXME try to get a better controlled frame rate
+        // FIXME add an option to clean the end of line or not
 
         // Splits each texts in individual characters
         _this.txt = _this.txt.map((sentence) => { return sentence.split("")});
@@ -35,15 +39,11 @@ Animation.prototype.writeText = function(box) {
         var pause = _this.hasOwnProperty("pause") ? _this.pause.shift() : false;
         var altSpeed = _this.hasOwnProperty("altSpeed") ? _this.altSpeed.shift() : false;
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
         async function writing() {
             if (_this.stop) reject("User triggered a stop event");
 
             else if (pause && index == pause[0][0] && l == pause[0][1]) {
-                await sleep(pause[1]);
+                await _this.sleep(pause[1]);
                 if (_this.pause[0] != undefined) pause = _this.pause.shift();
                 else pause = false;
                 requestAnimationFrame(writing);
@@ -75,7 +75,7 @@ Animation.prototype.writeText = function(box) {
                     box.printOnLine(line, index, chara);
                     index++;
                     if (speed != 0) {
-                        await sleep(speed);
+                        await _this.sleep(speed);
                     }
                     requestAnimationFrame(writing);
                 }
@@ -331,15 +331,21 @@ Animation.prototype.addWord = function(removeListeners, callback) {
     }
 };
 Animation.prototype.cleanEndOfLine = function(line, index, char, box) {
-    var self = this;
-    var cleaning = setInterval(function() {
-        if (index >= box.x - box.marginX*2) {
-            clearInterval(cleaning);
-            return;
-        }
-        box.printOnLine(line, index++, char);
-    }, 10);
+    return new Promise ((resolve, reject) => {
+        const _this = this;
 
+        async function cleaning() {
+            if (index >= box.x - box.marginX*2) {
+                resolve();
+                return;
+            }
+            await _this.sleep(10);
+            box.printOnLine(line, index++, char);
+            requestAnimationFrame(cleaning);
+        }
+
+        requestAnimationFrame(cleaning);
+    });
 };
 Animation.prototype.clean = function(box, pos, reverse) {
     return new Promise ((resolve, reject) => {
@@ -355,11 +361,6 @@ Animation.prototype.clean = function(box, pos, reverse) {
 
         var line = reverse ? cleanAt[1][0] : cleanAt[0][0];
         var index = reverse ?  cleanAt[1][1] : cleanAt[0][1];
-
-        console.log(reverse);
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
 
         async function cleaning() {
             if (_this.stop) reject("User triggered a stop event");
@@ -393,7 +394,7 @@ Animation.prototype.clean = function(box, pos, reverse) {
                 char = chara;
             }
 
-            await sleep(speed);
+            await _this.sleep(speed);
             box.printOnLine(line, index, char);
             index += reverse ? -1 : 1;
             requestAnimationFrame(cleaning);
