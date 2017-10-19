@@ -114,221 +114,181 @@ Animation.prototype.displayText = function(box) {
         });
     }
 };
-Animation.prototype.addWord = function(removeListeners, callback) {
-    // Setup listeners for adding and removing words of a text
+Animation.prototype.addWord = function(box, removeListeners) {
+    return new Promise ((resolve, reject) => {
+        const _this = this;
 
-    /* This prototype takes two callback functions : one to remove the listeners
-       that triggers "add" and "remove" events from the outside the Animation
-       object, and another optional one that will execute the next given step */
-
-    var self = this;
-
-    this.txt.forEach(function(txts, i) {
-        txts.forEach(function(sentences, j) {
-            self.txt[i][j] = sentences.split(" ");
+        // Splits every texts in words arrays
+        _this.txt.forEach((txts, i) => {
+            txts.forEach((sentences, j)  => {
+                _this.txt[i][j] = sentences.split(" ");
+            });
         });
-    });
 
-    var n = l = i = index = 0;
-    var end = false;
-    var check = false;
+        // Setup text related indexes
+        var n = l = i = index = 0;
+        // Setup end of a text boolean that will triggers the crossing
+        var end = false;
 
-    var pointOfNoReturn = this.checkPoint[this.pointOfNoReturn];
-    var lastEnding = [];
+        const pointOfNoReturn = _this.checkPoint[_this.pointOfNoReturn];
+        var lastEnding = [];
 
-    //FIXME jhfdjkhgskdjfhg
-    var cor = false;
+        //FIXME jhfdjkhgskdjfhg
+        var cor = false;
 
-    window.addEventListener("remove", remove);
-    window.addEventListener("add", add);
-    window.addEventListener("stop", function() {
-        stop(removeListeners);
-    });
+        // Setup listeners for adding and removing words of a text
+        window.addEventListener("remove", remove);
+        window.addEventListener("add", add);
+        window.addEventListener("stop", () => stop(removeListeners));
 
-    function stop(next) {
-        window.removeEventListener("remove", remove);
-        window.removeEventListener("add", add);
-        removeListeners();
-        if (next) {
-            next();
+        function stop() {
+            window.removeEventListener("remove", remove);
+            window.removeEventListener("add", add);
+            removeListeners();
+            resolve();
         }
-    }
 
+        function crossOut(start, ending) {
+            var tag = { "type" : "s" };
 
-    function crossOut(start, ending) {
-        var tag = { "type" : "s" };
-
-        if (start[1] == ending[1]) {
-            tag.line = start[1];
-            if (start[0] == 0) {
-                tag.open = 0;
+            if (start[1] == ending[1]) {
+                tag.line = start[1];
+                if (start[0] == 0) tag.open = 0;
+                else tag.open = start[0]+1;
+                tag.close = ending[0];
+                box.addTags(tag);
             }
             else {
-                tag.open = start[0]+1;
-            }
-            tag.close = ending[0];
-            self.box.addTags(tag);
-        }
-        else {
-            for (var z = ending[1]; z >= start[1]; z--) {
-                tag.line = z;
-                if (z == start[1]) {
-                    if (start[0] == 0) {
+                for (var z = ending[1]; z >= start[1]; z--) {
+                    tag.line = z;
+                    if (z == start[1]) {
+                        if (start[0] == 0) tag.open = 0;
+                        else tag.open = start[0]+1;
+                        tag.close = lastEnding[z]-1;
+                    }
+                    else if (z == ending[1]) {
                         tag.open = 0;
+                        tag.close = ending[0];
                     }
                     else {
-                        tag.open = start[0]+1;
+                        tag.open = 0;
+                        tag.close = lastEnding[z]-1;
                     }
-                    tag.close = lastEnding[z]-1;
+                    box.addTags(tag);
                 }
-                else if (z == ending[1]) {
-                    tag.open = 0;
-                    tag.close = ending[0];
-                }
-                else {
-                    tag.open = 0;
-                    tag.close = lastEnding[z]-1;
-                }
-
-                self.box.addTags(tag);
             }
         }
 
+        function add() {
+            var nextWord = _this.txt[n][l][i];
 
+            if (nextWord === undefined) {
+                if (_this.txt[n][l+1] === undefined) {
+                    if (!end) end = true;
+                    else return;
 
-    }
+                    if (_this.txt[n+1] === undefined) return stop();
 
-    function add() {
-        var nextWord = self.txt[n][l][i];
-
-        if (nextWord == undefined) {
-            if (self.txt[n][l+1] == undefined) {
-                if (!end) {
-                    end = true;
-                }
-                else {
+                    // magically change the checkpoint if its index is the end of a line
+                    if (_this.checkPoint[n+1][0] >= lastEnding[_this.checkPoint[n+1][1]]-1) {
+                        _this.checkPoint[n+1] = [0, _this.checkPoint[n+1][1]+1]
+                    }
+                    crossOut(_this.checkPoint[n+1], [index-1, l]);
                     return;
                 }
-                if (self.txt[n+1] == undefined) {
-                    stop(callback);
-                    return;
+                else {
+                    lastEnding.push(index);
+                    l++;
+                    i = index = 0;
+
+                    nextWord = _this.txt[n][l][i];
                 }
-                // magically change the checkpoint if its index is the end of a line
-                if (self.checkPoint[n+1][0] >= lastEnding[self.checkPoint[n+1][1]]-1) {
-                    self.checkPoint[n+1] = [0, self.checkPoint[n+1][1]+1]
-                }
-                crossOut(self.checkPoint[n+1], [index-1, l]);
-                return;
             }
-            else {
-                lastEnding.push(index);
-                l++;
-                i = index = 0;
 
-                nextWord = self.txt[n][l][i];
-            }
-        }
+            if (end) {
+                box.removeTags(l);
+                // print the next word
+                box.printOnLine(l, index, nextWord);
 
-        if (end) {
-            self.box.cleanLines(l);
-            // reprint line as it was without the <s> tag
-            self.box.printOnLine(l, 0, self.txt[n][l].slice(0,i).join(" "));
-            // print the next word
-            self.box.printOnLine(l, index, nextWord);
-
-            if (l == self.checkPoint[n+1][1] && index >= self.checkPoint[n+1][0]) {
-                crossOut(self.checkPoint[n+1], [index+nextWord.length, l]);
-            }
-            else {
-                crossOut([0,l], [index+nextWord.length, l]);
-            }
-        }
-        else {
-            self.box.printOnLine(l, index, nextWord);
-        }
-
-        index += nextWord.length + 1;
-        i++;
-    }
-
-    function remove() {
-
-        function getSpaces(length) {
-            let space = "";
-            if (!String.prototype.repeat)
-                for (let a = 0; a < length; a++) space += " ";
-            else space = " ".repeat(length);
-
-            return space;
-        }
-
-
-
-        var lastWord = self.txt[n][l][i-1];
-        if (l == pointOfNoReturn[1] && index-lastWord.length-1 <= pointOfNoReturn[0]) {
-            return;
-        }
-        if (cor) {
-            // Sorry FIXME
-            lastEnding.pop();
-            cor = false;
-        }
-        if (lastWord == undefined) {
-            if (l <= 0) {
-                return;
-            }
-            else {
-                l--;
-                i = self.txt[n][l].length-1 ;
-                lastWord = self.txt[n][l][i];
-                index = lastEnding.pop()- lastWord.length-1;
-            }
-        }
-        else {
-            index -= lastWord.length+1;
-            i--;
-        }
-        if (end) {
-            self.box.cleanLines(l);
-            self.box.printOnLine(l, 0, self.txt[n][l].slice(0,i).join(" "));
-            self.box.printOnLine(l, index, getSpaces(lastWord.length));
-            if (index > 0) {
-                if (l <= self.checkPoint[n+1][1] && index-1 <= self.checkPoint[n+1][0]) {
-                    end = false;
-                    n++;
+                if (l == _this.checkPoint[n+1][1] && index >= _this.checkPoint[n+1][0]) {
+                    crossOut(_this.checkPoint[n+1], [index+nextWord.length, l]);
                 }
                 else {
-                    if (l == self.checkPoint[n+1][1] && index >= self.checkPoint[n+1][0]) {
-                        crossOut(self.checkPoint[n+1], [index-1, l]);
+                    crossOut([0,l], [index+nextWord.length, l]);
+                }
+            }
+            else {
+                box.printOnLine(l, index, nextWord);
+            }
+
+            index += nextWord.length + 1;
+            i++;
+        }
+
+        function remove() {
+            var lastWord = _this.txt[n][l][i-1];
+            if (l == pointOfNoReturn[1] && index-lastWord.length-1 <= pointOfNoReturn[0]) {
+                return;
+            }
+            if (cor) {
+                // Sorry FIXME
+                lastEnding.pop();
+                cor = false;
+            }
+            if (lastWord == undefined) {
+                if (l <= 0) return;
+                else {
+                    l--;
+                    i = _this.txt[n][l].length-1 ;
+                    lastWord = _this.txt[n][l][i];
+                    index = lastEnding.pop() - lastWord.length-1;
+                }
+            }
+            else {
+                index -= lastWord.length+1;
+                i--;
+            }
+            if (end) {
+                box.removeTags(l);
+                box.printOnLine(l, index, " ".repeat(lastWord.length));
+                if (index > 0) {
+                    if (l <= _this.checkPoint[n+1][1] && index-1 <= _this.checkPoint[n+1][0]) {
+                        end = false;
+                        n++;
                     }
                     else {
-                        crossOut([0, l], [index-1, l]);
+                        if (l == _this.checkPoint[n+1][1] && index >= _this.checkPoint[n+1][0]) {
+                            crossOut(_this.checkPoint[n+1], [index-1, l]);
+                        }
+                        else {
+                            crossOut([0, l], [index-1, l]);
+                        }
                     }
                 }
-            }
-            else if (l <= self.checkPoint[n+1][1] && index-1 <= self.checkPoint[n+1][0]) {
-                if (self.txt[n+1][l-1].length != self.txt[n][l-1].length) {
-                    // deal with the fucking checkpoint exception
-                    end = false;
-                    n++;
-                    l -= 1;
-                    i = self.txt[n][l].length-1;
-                    index = self.txt[n-1][l].join(" ").length+1;
-                    lastEnding.pop();
-                    lastEnding.push(self.txt[n][l].join(" ").length+1);
-                    cor = true;
-                }
-                else {
-                    end = false;
-                    n++;
-                }
+                else if (l <= _this.checkPoint[n+1][1] && index-1 <= _this.checkPoint[n+1][0]) {
+                    if (_this.txt[n+1][l-1].length != _this.txt[n][l-1].length) {
+                        // deal with the fucking checkpoint exception
+                        end = false;
+                        n++;
+                        l -= 1;
+                        i = _this.txt[n][l].length-1;
+                        index = _this.txt[n-1][l].join(" ").length+1;
+                        lastEnding.pop();
+                        lastEnding.push(_this.txt[n][l].join(" ").length+1);
+                        cor = true;
+                    }
+                    else {
+                        end = false;
+                        n++;
+                    }
 
+                }
+            }
+            else {
+                box.printOnLine(l, index, " ".repeat(lastWord.length));
             }
         }
-        else {
-            self.box.printOnLine(l, index, getSpaces(lastWord.length));
-        }
-    }
+    });
 };
 Animation.prototype.cleanEndOfLine = function(line, index, char, box) {
     return new Promise ((resolve, reject) => {

@@ -415,27 +415,39 @@ Box.prototype.addTags = function(tag) {
     this.lines[l].innerHTML = newLine;
 
 };
-Box.prototype.removeTags = function() {
-    /* Removes every tags from the box but lets the content on the screen */
+Box.prototype.removeTags = function(l) {
+    /* Removes every or specific lines tags from the box but lets
+    ** the content on the screen */
+    const _this = this;
 
-    this.lines.forEach(function(line) {
-        var l = line.children.length;
-        if (l > 0) {
-            var content = line.innerHTML;
-
+    function removeTagsOnLine(l) {
+        var line = _this.lines[l]
+        var length = line.children.length;
+        if (length > 0) {
+            let content = line.innerHTML;
             // Rewrites the line until there's no tags anymore
-            for (var i = 0; i < l; i++) {
-                var open = content.indexOf("<");
-                var close = content.indexOf(">", content.indexOf(">")+1);
-                var txt = line.children[i].innerHTML;
+            for (let i = 0; i < length; i++) {
+                let open = content.indexOf("<");
+                let close = content.indexOf(">", content.indexOf(">")+1);
+                let txt = line.children[i].innerHTML;
 
                 content = content.substring(0, open) + txt + content.substr(close+1);
             }
-
-            line.innerHTML = content;
+            _this.lines[l].innerHTML = content;
         }
-    });
+    }
 
+    if (l === undefined) {
+        let end = _this.lines.length;
+        for (let i = 0; i < end; i++) removeTagsOnLine(i);
+    } else if (!Array.isArray(l)) {
+        removeTagsOnLine(l + _this.marginY);
+    } else {
+        let start = l[0] + _this.marginY;
+        let end = l[1]  + _this.marginY;
+        for (start; i <= end; i++) removeTagsOnLine(i);
+    }
+    
 };
 Box.prototype.drawError = function() {
 
