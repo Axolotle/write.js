@@ -328,29 +328,8 @@ Box.prototype.draw = function() {
     });
 
 };
-Box.prototype.reboot = function(callback) {
-    /* Cleans every lines of the box from any text and elements that
-       could be on screen by rewriting it */
-
-    var repeatedLines = "─".repeat(this.x - 2);
-    var repeatedSpaces = "│" + " ".repeat(this.x - 2) + "│";
-
-    var l = this.lines.length;
-    for (var i = 0; i < l; i++) {
-        if (i == 0) {
-            this.lines[i].innerHTML = "┌" + repeatedLines + "┐";
-        } else if (i == l-1) {
-            this.lines[i].innerHTML = "└" + repeatedLines + "┘";
-        } else {
-            this.lines[i].innerHTML = repeatedSpaces;
-        }
-    }
-
-    if (callback) callback();
-
-};
 Box.prototype.reset = function() {
-    /* Totally reboot the box by deleting every nodes and reexecuting
+    /* Totally reset the box by deleting every nodes and reexecuting
     ** display() box method. To use when you add extra elements to the div. */
     const div = document.getElementById(this.div);
 
