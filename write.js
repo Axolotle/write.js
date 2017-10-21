@@ -364,64 +364,63 @@ Animation.prototype.clean = function(box, pos, reverse) {
 
     });
 };
-Animation.prototype.startSubtitles = function(callback) {
+Animation.prototype.startSubtitles = function(box) {
+    return new Promise((resolve, reject) => {
+        const _this = this;
+        var start = null;
 
-    var self = this;
-    var start = null;
+        var active = [];
+        var removed = false;
 
-    var active = [];
-    var removed = false;
+        function sub(timestamp) {
+            if (_this.stop) reject("User triggered a stop event");
 
-    function sub(timestamp) {
-        if (self.stop) {
-            return;
-        }
-        if (start === null) start = timestamp;
-        var progress = timestamp - start;
+            if (start === null) start = timestamp;
+            var progress = timestamp - start;
 
-        if (active.length > 0) {
-            for (var i = 0; i < active.length; i++) {
-                if (progress >= active[i].end) {
-                    self.box.removeTags();
+            if (active.length > 0) {
+                for (var i = 0; i < active.length; i++) {
+                    if (progress >= active[i].end) {
+                        box.removeTags();
+                        for (var a = 0; a < active[i].txt.length; a++) {
+                            box.printOnLine(active[i].pos[a][1], active[i].pos[a][0], " ".repeat(active[i].txt[a].length));
+                        }
+                        active.splice(i, 1);
+                        removed = true;
+                    }
+                }
+            }
+
+            while (_this.txt[0] != undefined && progress >= _this.txt[0].start) {
+                let data = _this.txt[0];
+                box.removeTags();
+
+                for (var i = 0; i < data.txt.length; i++) {
+                    box.printOnLine(data.pos[i][1], data.pos[i][0], data.txt[i]);
+                }
+                active.push(_this.txt.shift());
+                removed = true;
+            }
+
+            if (removed) {
+                for (var i = 0; i < active.length; i++) {
                     for (var a = 0; a < active[i].txt.length; a++) {
-                        self.box.printOnLine(active[i].pos[a][0], active[i].pos[a][1], " ".repeat(active[i].txt[a].length));
-                    }
-                    active.splice(i, 1);
-                    removed = true;
-                }
-            }
-        }
-
-        if (self.txt[0] != undefined && progress >= self.txt[0].start) {
-            let data = self.txt[0];
-            self.box.removeTags();
-
-            for (var i = 0; i < data.txt.length; i++) {
-                self.box.printOnLine(data.pos[i][0], data.pos[i][1], data.txt[i]);
-            }
-            active.push(self.txt.shift());
-            removed = true;
-        }
-
-        if (removed) {
-            for (var i = 0; i < active.length; i++) {
-                for (var a = 0; a < active[i].txt.length; a++) {
-                    if (active[i].tags != undefined) {
-                        self.box.addTags(active[i].tags[a]);
+                        if (active[i].tags != undefined) {
+                            box.addTags(active[i].tags[a]);
+                        }
                     }
                 }
+                removed = false;
             }
-            removed = false;
+
+            if (_this.txt.length > 0 || active.length > 0) {
+                requestAnimationFrame(sub);
+            }
+            else {
+                resolve();
+            }
         }
 
-
-        if (self.txt.length > 0 || active.length > 0) {
-            requestAnimationFrame(sub);
-        }
-        else {
-            callback();
-        }
-    }
-
-    requestAnimationFrame(sub);
+        requestAnimationFrame(sub);
+    });
 };

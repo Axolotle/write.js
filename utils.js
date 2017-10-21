@@ -41,7 +41,7 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
        every informations needed by the animation's methods. */
 
     // FIXME Find a better way to reference the differents json in the methods
-    var _this = this;
+    const _this = this;
     var returnedObj = [];
 
     this.transfer = Array(JSONs.length).fill([]);
@@ -109,7 +109,7 @@ FormatJSON.prototype.splitTxt = function(txt, startAt, zone) {
     // character of a line
     var nvrFirst = ["?", "!", ":", ";", "»"];
     var nvrLast = ["¿", "¡", "«"];
-    var _this = this;
+    const _this = this;
     var txtLength = txt.length;
     var xZone = zone.x;
 
@@ -196,7 +196,7 @@ FormatJSON.prototype.align = function(txt, startAt, zone, adder) {
 
     txt = this.splitTxt(txt, startAt, zone);
 
-    var _this = this;
+    const _this = this;
     txt.forEach(function(line, index) {
         xToAdd = xZone - _this.noOptTags(line).length;
 
@@ -214,7 +214,7 @@ FormatJSON.prototype.align = function(txt, startAt, zone, adder) {
 };
 FormatJSON.prototype.combine = function(txts, startAt, zone) {
 
-    var _this = this;
+    const _this = this;
     var starters = [{prevTxt: 0, prevIndex: 0}];
 
     var newTxts = [];
@@ -266,7 +266,9 @@ FormatJSON.prototype.combine = function(txts, startAt, zone) {
 };
 FormatJSON.prototype.subtitle = function(input) {
 
-    var _this = this;
+    const _this = this;
+    const maxX = _this.x - _this.marginX * 2;
+    const maxY = _this.y - _this.marginY * 2;
 
     function convertToMillisecond(srtString) {
         var splittedStr = srtString.split(":").reverse();
@@ -288,8 +290,7 @@ FormatJSON.prototype.subtitle = function(input) {
     function getPos(position, lineLength, secondLine) {
         var posX = Math.floor((_this.x-_this.marginX*2)*(position[0]/100)) - Math.floor(lineLength/2);
         var posY = Math.floor((_this.y-_this.marginY*2-1)*(position[1]/100));
-
-        return [posY, posX];
+        return [posX, posY];
     }
 
     var txts = [];
@@ -297,14 +298,14 @@ FormatJSON.prototype.subtitle = function(input) {
     input.forEach(function(subtitle) {
         var data = {};
 
-        let timing = subtitle[0];
-        let txt = subtitle[1];
+        const timing = subtitle[0];
+        const txt = subtitle[1];
 
-        var place = subtitle[3] || [50,100];
-        var more = subtitle[4] || 0;
+        const position = subtitle[3] || [50,100];
+        const lineAdder = subtitle[4] || 0;
 
-        for (var i = 0; i < txt.length; i++) {
-            txt[i] = " "+txt[i]+" ";
+        for (let i = 0; i < txt.length; i++) {
+            txt[i] = " " + txt[i] + " ";
         }
 
         data.start = typeof timing[0] === "string" ? convertToMillisecond(timing[0]) : timing[0];
@@ -312,70 +313,65 @@ FormatJSON.prototype.subtitle = function(input) {
 
         data.pos = [];
         if (txt.length > 1) {
-            let pos1, pos2;
+            let posA = getPos(position, txt[0].length);
+            let posB = getPos(position, txt[1].length);
 
-            pos1 = getPos(place, txt[0].length);
-            pos2 = getPos(place, txt[1].length);
+            if (position[1] <= 50) posB[1] += 1;
+            else posA[1] -= 1;
 
-            if (place[1] <= 50) {
-                pos2[0] += 1;
+            if (lineAdder != 0) {
+                posA[1] += lineAdder;
+                posB[1] += lineAdder;
             }
-            else {
-                pos1[0] -= 1;
+
+            let cor = 0;
+            let larger = txt[0].length > txt[1].length
+                         ? {x: posA[0], len: txt[0].length}
+                         : {x: posB[0], len: txt[1].length};
+            if (larger.x < 0) cor = larger.x * -1;
+            else if (larger.x + larger.len > maxX) {
+                cor = maxX - (larger.x + larger.len);
             }
 
-            // correct x position if position is outside the box
-            if (pos1[1] < 0 || pos2[1] < 0) {
-                if (txt[0].length > txt[1].length) {
-                    pos2[1] += pos1[1] * -1;
-                    pos1[1] += pos1[1] * -1;
-                }
-                else {
-                    pos1[1] += pos2[1] * -1;
-                    pos2[1] += pos2[1] * -1;
-                }
+            posA[0] += cor;
+            posB[0] += cor;
+
+            if (posB[1] >= maxY) {
+                cor = maxY - posB[1] -1;
+                posB[1] += cor;
+                posA[1] += cor;
             }
-            else if (pos1[1]+txt[0].length > _this.x-_this.marginX*2 || pos2[1]+txt[1].length > _this.x-_this.marginX*2){
-                let boxW = _this.x-_this.marginX*2;
-                if (txt[0].length > txt[1].length) {
-                    let adder = boxW - (pos1[1]+txt[0].length);
-                    pos2[1] += adder;
-                    pos1[1] += adder;
-                }
-                else {
-                    let adder = boxW - (pos2[1]+txt[1].length);
-                    pos1[1] += adder;
-                    pos2[1] += adder;
-                }
 
-
-            }
-            pos1[0] += more;
-            pos2[0] += more;
-
-            data.pos.push(pos1, pos2);
+            data.pos.push(posA, posB);
         }
         else {
-            data.pos.push(getPos(place, txt[0].length));
+            let pos = getPos(position, txt[0].length);
 
-            if (data.pos[0][1]+txt[0].length > _this.x-_this.marginX*2) {
-                data.pos[0][1] += (_this.x-_this.marginX*2) - (data.pos[0][1]+txt[0].length);
+            if (lineAdder != 0) pos[1] += lineAdder;
+
+            if (pos[0] < 0) pos[0] = 0;
+            else if (pos[0] + txt[0].length > maxX) {
+                pos[0] += maxX - (pos[0] + txt[0].length);
             }
-            data.pos[0][0] += more;
-        }
 
+            if (pos[1] >= maxY) {
+                pos[1] += maxY - pos[1] - 1;
+            }
+
+            data.pos.push(pos);
+        }
 
         data.txt = txt;
 
         if (subtitle[2] != undefined) {
             data.tags = [];
-            data.pos.forEach(function(posArray, i) {
+            data.pos.forEach((posArray, i) => {
                 let tag = {};
                 tag.type = "span";
                 tag.class = "sub " + subtitle[2];
-                tag.line = posArray[0];
-                tag.open = posArray[1];
-                tag.close = posArray[1] + data.txt[i].length;
+                tag.line = posArray[1];
+                tag.open = posArray[0];
+                tag.close = posArray[0] + data.txt[i].length;
 
                 data.tags.push(tag);
             })
@@ -390,7 +386,7 @@ FormatJSON.prototype.cleanOptions = function(txt) {
     /* Separates the texts from the option's tags and returns it as an object */
 
     var options = [];
-    var _this = this;
+    const _this = this;
 
     if(!Array.isArray(txt)) txt = [txt];
 
@@ -437,7 +433,7 @@ FormatJSON.prototype.manageOptions = function(options, json) {
         options = [this.transfer[this.i], ...options];
     }
 
-    var _this = this;
+    const _this = this;
     options.forEach(function(optLine) {
         // The tag options need a length variable to recalculate its position
         // when multiple tags are on the same line.
