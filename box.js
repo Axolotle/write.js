@@ -349,6 +349,19 @@ Box.prototype.reboot = function(callback) {
     if (callback) callback();
 
 };
+Box.prototype.reset = function() {
+    /* Totally reboot the box by deleting every nodes and reexecuting
+    ** display() box method. To use when you add extra elements to the div. */
+    const div = document.getElementById(this.div);
+
+    const length = div.children.length;
+    for (let n = 0; n < length; n++) {
+        div.removeChild(div.lastChild);
+    }
+
+    this.lines = [];
+    this.display();
+};
 Box.prototype.cleanLines = function(lines) {
     /* Cleans only specified lines inside the box minus margins */
 
@@ -447,7 +460,7 @@ Box.prototype.removeTags = function(l) {
         let end = l[1]  + _this.marginY;
         for (start; i <= end; i++) removeTagsOnLine(i);
     }
-    
+
 };
 Box.prototype.drawError = function() {
 

@@ -22,7 +22,7 @@ function getAnimationObjects(url) {
             json = formatter.getNewJSON(json);
             var txtAnim = [];
             json.forEach(function(obj) {
-                txtAnim.push(new Animation(obj, box));
+                txtAnim.push(new Animation(obj));
             });
             resolve(txtAnim);
         });
