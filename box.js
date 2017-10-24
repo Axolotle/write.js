@@ -134,8 +134,8 @@ Box.prototype.getBoxSize = function (opt) {
 
         if (x <= maxX && x >= minX && y <= maxY && y >= minY){
             return {"x" : x, "y" : y};
-        } else if (x > maxX && y-1 >= minY) {
-            return fromRatio(ratio, y--);
+        } else if (x > maxX && y - 1 >= minY) {
+            return fromRatio(ratio, --y);
         } else return null;
     }
 
