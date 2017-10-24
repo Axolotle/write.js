@@ -13,22 +13,6 @@ function readJSONFile(url) {
     });
 }
 
-function getAnimationObjects(url) {
-    return new Promise((resolve, reject) => {
-        readJSONFile(url)
-        .then(json => {
-            box.init(json.shift());
-            const formatter = new FormatJSON(box.x, box.y, box.marginX, box.marginY);
-            json = formatter.getNewJSON(json);
-            var txtAnim = [];
-            json.forEach(function(obj) {
-                txtAnim.push(new Animation(obj));
-            });
-            resolve(txtAnim);
-        });
-    });
-}
-
 function FormatJSON(x, y, marginX, marginY) {
     this.x = x;
     this.y = y;
