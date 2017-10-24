@@ -83,11 +83,8 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
             newTxt = _this.combine(txt, startAt, zone);
             obj.pointOfNoReturn = json.pointOfNoReturn;
         } else if (format == "subtitle") {
-            return {
-                txt: _this.subtitle(txt)
-            }
+            return { txt: _this.subtitle(txt) };
         }
-
 
         obj.txt = newTxt.txt;
         if (newTxt.options.length > 0) {

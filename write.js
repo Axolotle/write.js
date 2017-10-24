@@ -323,7 +323,7 @@ Animation.prototype.clean = function(box, pos, reverse) {
         var index = reverse ?  cleanAt[1][0] : cleanAt[0][0];
 
         async function cleaning() {
-            if (_this.stop) reject("User triggered a stop event");
+            if (_this.stop) return reject("User triggered a stop event");
 
             if (reverse) {
                 if (line == 0 && index < 0) {
@@ -373,7 +373,7 @@ Animation.prototype.startSubtitles = function(box) {
         var removed = false;
 
         function sub(timestamp) {
-            if (_this.stop) reject("User triggered a stop event");
+            if (_this.stop) return reject("User triggered a stop event");
 
             if (start === null) start = timestamp;
             var progress = timestamp - start;
