@@ -22,8 +22,8 @@ Box.prototype.init = function(opt) {
         this.x = boxSize.x;
         this.y = boxSize.y;
     } else {
-        this.drawError();
-        // FIXME deal with errors
+        this.drawError("Écran trop petit !");
+        return Promise.reject();
     }
 
 };
@@ -110,12 +110,8 @@ Box.prototype.getBoxSize = function (opt) {
             let width = index == 0 ? length : index + 1 + length;
 
             if (words[i].indexOf("\n") > -1) {
-                if (width - "\n".length > x - margins) {
-                    y += 2;
-                }
-                else {
-                    y++;
-                }
+                if (width - "\n".length > x - margins) y += 2;
+                else y++;
                 index = 0;
             } else if (width <= x - margins) {
                 index += index == 0 ? length : 1 + length;
@@ -199,7 +195,7 @@ Box.prototype.setupLines = function(x,y) {
     return lines;
 
 };
-Box.prototype.display = function(callback) {
+Box.prototype.display = function() {
     /* Display the box on window without animation. */
 
     // Gets the formated lines with the box characters
@@ -221,8 +217,6 @@ Box.prototype.display = function(callback) {
     var div = document.getElementById(this.div);
     div.appendChild(docFragment);
 
-    if (callback) callback();
-
 };
 Box.prototype.draw = function() {
     /* Animation of the display of the box from previous size or scratch
@@ -230,100 +224,100 @@ Box.prototype.draw = function() {
 
     return new Promise ((resolve, reject) => {
 
-    var div = document.getElementById(this.div);
-    var _this = this;
-    var start = null;
+        var div = document.getElementById(this.div);
+        var _this = this;
+        var start = null;
 
-    var x = this.x;
-    var y = this.y;
+        var x = this.x;
+        var y = this.y;
 
-    var oldX, oldY;
-    if (this.lines[0] == undefined) {
-        var one = document.createElement("p");
-        var two = document.createElement("p");
-        one.innerHTML = "┌┐";
-        two.innerHTML = "└┘";
-        div.appendChild(one);
-        div.appendChild(two);
-        this.lines.push(one, two);
-        oldX = oldY = 2;
-    } else {
-        oldX = this.lines[0].innerHTML.length;
-        oldY = this.lines.length;
-    }
-
-    var actualX = oldX;
-    var actualY = oldY;
-    var xFrame = this.animDuration / (x - actualX);
-    var yFrame = this.animDuration / (y - actualY);
-
-    function draw(timeStamp) {
-        if (start === null) start = timeStamp;
-        var progress = timeStamp - start;
-
-        // Defines how many lines we should add or remove to/from the box for this frame.
-        var xStep = Math.floor((progress / xFrame) - (actualX - oldX));
-        var yStep = Math.floor((progress / yFrame) - (actualY - oldY));
-
-        // Corrects add variables if progress went a bit to far
-        if ((xStep > 0 && actualX + xStep > x) ||
-        (xStep < 0 && actualX + xStep < x)) {
-            xStep = x - actualX;
-        }
-        if ((yStep > 0 && actualY + yStep > y) ||
-        (yStep < 0 && actualY + yStep < y)) {
-            yStep = y - actualY;
+        var oldX, oldY;
+        if (this.lines[0] == undefined) {
+            var one = document.createElement("p");
+            var two = document.createElement("p");
+            one.innerHTML = "┌┐";
+            two.innerHTML = "└┘";
+            div.appendChild(one);
+            div.appendChild(two);
+            this.lines.push(one, two);
+            oldX = oldY = 2;
+        } else {
+            oldX = this.lines[0].innerHTML.length;
+            oldY = this.lines.length;
         }
 
-        if (xStep != 0) {
-            actualX += xStep;
-            // Rewrites the lines with the new length.
-            var l = _this.lines.length;
-            var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
-            var repeatedLines = "─".repeat(actualX-2);
-            for (let i = 0; i < l; i++) {
-                if (i == 0) {
-                    _this.lines[i].innerHTML = "┌" + repeatedLines + "┐";
-                } else if (i == l-1) {
-                    _this.lines[i].innerHTML = "└" + repeatedLines + "┘";
-                } else {
-                    _this.lines[i].innerHTML = repeatedSpaces;
+        var actualX = oldX;
+        var actualY = oldY;
+        var xFrame = this.animDuration / (x - actualX);
+        var yFrame = this.animDuration / (y - actualY);
+
+        function draw(timeStamp) {
+            if (start === null) start = timeStamp;
+            var progress = timeStamp - start;
+
+            // Defines how many lines we should add or remove to/from the box for this frame.
+            var xStep = Math.floor((progress / xFrame) - (actualX - oldX));
+            var yStep = Math.floor((progress / yFrame) - (actualY - oldY));
+
+            // Corrects add variables if progress went a bit to far
+            if ((xStep > 0 && actualX + xStep > x) ||
+            (xStep < 0 && actualX + xStep < x)) {
+                xStep = x - actualX;
+            }
+            if ((yStep > 0 && actualY + yStep > y) ||
+            (yStep < 0 && actualY + yStep < y)) {
+                yStep = y - actualY;
+            }
+
+            if (xStep != 0) {
+                actualX += xStep;
+                // Rewrites the lines with the new length.
+                var l = _this.lines.length;
+                var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
+                var repeatedLines = "─".repeat(actualX-2);
+                for (let i = 0; i < l; i++) {
+                    if (i == 0) {
+                        _this.lines[i].innerHTML = "┌" + repeatedLines + "┐";
+                    } else if (i == l-1) {
+                        _this.lines[i].innerHTML = "└" + repeatedLines + "┘";
+                    } else {
+                        _this.lines[i].innerHTML = repeatedSpaces;
+                    }
                 }
             }
-        }
 
-        if (yStep > 0) {
-            actualY += yStep;
-            // Inserts new nodes and characters.
-            var l = _this.lines.length - 1;
-            var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
-            for (let i = 0; i < yStep; i++) {
-                var elem = document.createElement("p");
-                elem.innerHTML = repeatedSpaces;
-                div.insertBefore(elem, div.lastChild)
-                // also keeps a reference to the element for future use.
-                _this.lines.splice(l + i, 0, elem);
+            if (yStep > 0) {
+                actualY += yStep;
+                // Inserts new nodes and characters.
+                var l = _this.lines.length - 1;
+                var repeatedSpaces = "│" + " ".repeat(actualX-2) + "│";
+                for (let i = 0; i < yStep; i++) {
+                    var elem = document.createElement("p");
+                    elem.innerHTML = repeatedSpaces;
+                    div.insertBefore(elem, div.lastChild)
+                    // also keeps a reference to the element for future use.
+                    _this.lines.splice(l + i, 0, elem);
+                }
+            } else if (yStep < 0) {
+                actualY += yStep;
+                yStep *= -1;
+
+                // Removes nodes
+                for (let y = 0; y < yStep; y++) {
+                    div.removeChild(div.lastChild.previousElementSibling);
+                }
+                _this.lines.splice(_this.lines.length - 1 - yStep, yStep);
             }
-        } else if (yStep < 0) {
-            actualY += yStep;
-            yStep *= -1;
 
-            // Removes nodes
-            for (let y = 0; y < yStep; y++) {
-                div.removeChild(div.lastChild.previousElementSibling);
+            if (progress < _this.animDuration) {
+                requestAnimationFrame(draw);
             }
-            _this.lines.splice(_this.lines.length - 1 - yStep, yStep);
+            else {
+                resolve();
+            }
         }
 
-        if (progress < _this.animDuration) {
-            requestAnimationFrame(draw);
-        }
-        else {
-            resolve();
-        }
-    }
-
-    requestAnimationFrame(draw);
+        requestAnimationFrame(draw);
 
     });
 
@@ -441,23 +435,48 @@ Box.prototype.removeTags = function(l) {
     }
 
 };
-Box.prototype.drawError = function() {
+Box.prototype.drawError = function(message) {
 
     // FIXME need to rework the error handling
-    var div = document.getElementById(this.div);
+    const _this = this;
+    const div = document.getElementById(_this.div);
 
     while (div.hasChildNodes()) {
         div.removeChild(div.lastChild);
     }
-    //var bod = document.getElementById("center");
-    this.error = true;
-    var err  = document.createElement("div");
-    err.className += "error";
-    div.appendChild(err);
+    _this.lines = [];
 
-    var elem = document.createElement("p");
-    elem.innerHTML = "┌──────────────────────┐</br>│ /!\\ écran trop petit │</br>└──────────────────────┘";
-    err.appendChild(elem);
+    var sentences = [];
+    var sentence = "│ ";
+    var width = 2;
+    var longest = 0;
+    message.split(" ").forEach(word => {
+        let length = word.length;
+        width += sentence.length > 2 ? length + 1 : length;
+        if (width <= _this.maxW - 2) {
+            sentence += sentence.length > 0 ? " " + word : word;
+        } else {
+            if (sentence.length + 2 > longest) longest = sentence.length + 2;
+            sentences.push(sentence + " │");
+            sentence = "│ ";
+            width = 2;
+        }
+    });
+    sentences.push(sentence + " │");
+    if (sentence.length + 2 > longest) longest = sentence.length + 2;
+    sentences.unshift("┌" + "─".repeat(longest - 2) + "┐");
+    sentences.push("└" + "─".repeat(longest - 2) + "┘");
+
+    _this.error = true;
+    var err  = document.createDocumentFragment("div");
+    //err.className += "error";
+    sentences.forEach(sentence => {
+        let elem = document.createElement("p");
+        elem.innerHTML = sentence;
+        err.appendChild(elem);
+    });
+
+    div.appendChild(err);
 
     setTimeout(function() {
         div.removeChild(err);
