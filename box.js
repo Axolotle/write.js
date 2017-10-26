@@ -7,25 +7,25 @@ function Box() {
 
 }
 Box.prototype.init = function(opt) {
+    return new Promise ((resolve, reject) => {
+        this.marginX = opt.marginX || 1;
+        this.marginY = opt.marginY || 1;
+        this.div = opt.divName;
+        this.animDuration = opt.animDuration * 1000 || 300;
 
-    this.marginX = opt.marginX || 1;
-    this.marginY = opt.marginY || 1;
-    this.div = opt.divName;
-    this.animDuration = opt.animDuration * 1000 || 300;
+        var pageSize = this.getPageDimension();
+        this.maxW = pageSize.w;
+        this.maxH = pageSize.h;
 
-    var pageSize = this.getPageDimension();
-    this.maxW = pageSize.w;
-    this.maxH = pageSize.h;
-
-    var boxSize = this.getBoxSize(opt);
-    if (boxSize != null) {
-        this.x = boxSize.x;
-        this.y = boxSize.y;
-    } else {
-        this.drawError("Écran trop petit !");
-        return Promise.reject();
-    }
-
+        var boxSize = this.getBoxSize(opt);
+        if (boxSize != null) {
+            this.x = boxSize.x;
+            this.y = boxSize.y;
+            resolve();
+        } else {
+            reject("Écran trop petit !");
+        }
+    });
 };
 Box.prototype.getPageDimension = function() {
     /* Returns the page dimension in number of characters */
@@ -440,6 +440,7 @@ Box.prototype.drawError = function(message) {
     // FIXME need to rework the error handling
     const _this = this;
     const div = document.getElementById(_this.div);
+    _this.error = true;
 
     while (div.hasChildNodes()) {
         div.removeChild(div.lastChild);
@@ -467,7 +468,6 @@ Box.prototype.drawError = function(message) {
     sentences.unshift("┌" + "─".repeat(longest - 2) + "┐");
     sentences.push("└" + "─".repeat(longest - 2) + "┘");
 
-    _this.error = true;
     var err  = document.createDocumentFragment("div");
     //err.className += "error";
     sentences.forEach(sentence => {
@@ -477,9 +477,5 @@ Box.prototype.drawError = function(message) {
     });
 
     div.appendChild(err);
-
-    setTimeout(function() {
-        div.removeChild(err);
-    }, 2000);
 
 };
