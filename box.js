@@ -3,7 +3,13 @@ function Box() {
     this.x = 0;
     this.y = 0;
     this.lines = [];
-    this.error = false; //FIXME needed ?
+    this.error = false;
+
+    var pageSize = this.getPageDimension();
+    this.maxW = pageSize.w;
+    this.maxH = pageSize.h;
+    this.charaW = pageSize.charaW;
+    this.charaH = pageSize.charaH;
 
 }
 Box.prototype.init = function(opt) {
@@ -16,6 +22,8 @@ Box.prototype.init = function(opt) {
         var pageSize = this.getPageDimension();
         this.maxW = pageSize.w;
         this.maxH = pageSize.h;
+        this.charaW = pageSize.charaW;
+        this.charaH = pageSize.charaH;
 
         var boxSize = this.getBoxSize(opt);
         if (boxSize != null) {
@@ -37,7 +45,7 @@ Box.prototype.getPageDimension = function() {
     var pageW = Math.floor(window.innerWidth / chara.w);
     var pageH = Math.floor(window.innerHeight / chara.h);
 
-    return {w: pageW, h: pageH};
+    return {w: pageW, h: pageH, charaW: chara.w, charaH: chara.h};
 
 };
 Box.prototype.getCharacterDimension = function() {
@@ -46,7 +54,7 @@ Box.prototype.getCharacterDimension = function() {
 
     var test = document.createElement("span");
     test.style.visibility = "hidden";
-    document.body.appendChild(test);
+    document.getElementsByTagName("html")[0].appendChild(test);
     test.innerHTML = "|";
 
     var w = test.offsetWidth;
