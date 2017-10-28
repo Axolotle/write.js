@@ -330,9 +330,8 @@ Box.prototype.draw = function() {
     });
 
 };
-Box.prototype.reset = function() {
-    /* Totally reset the box by deleting every nodes and reexecuting
-    ** display() box method. To use when you add extra elements to the div. */
+Box.prototype.remove = function() {
+    /* Totally remove the box by deleting every nodes */
     const div = document.getElementById(this.div);
 
     const length = div.children.length;
@@ -341,7 +340,6 @@ Box.prototype.reset = function() {
     }
 
     this.lines = [];
-    this.display();
 };
 Box.prototype.cleanLines = function(lines) {
     /* Cleans only specified lines inside the box minus margins */
