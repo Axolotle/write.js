@@ -57,6 +57,8 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         };
 
         var newTxt;
+        // TODO allow formatting combination
+        // TODO just modify the json instead of creationg new one
         if (format == undefined || format == "paragraph") {
             newTxt = _this.splitTxt(txt, startAt, zone);
             newTxt = _this.cleanOptions(newTxt);
@@ -68,10 +70,16 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
             obj.pointOfNoReturn = json.pointOfNoReturn;
         } else if (format == "subtitle") {
             return { txt: _this.subtitle(txt) };
+        } else if (format == "none") {
+            newTxt = { txt: txt };
+        }
+
+        if (json.hasOwnProperty('wordIsTag')) {
+            newTxt = { txt: _this.addTags(newTxt.txt, json.wordIsTag)};
         }
 
         obj.txt = newTxt.txt;
-        if (newTxt.options.length > 0) {
+        if (newTxt.hasOwnProperty("options") && newTxt.options.length > 0) {
             let options = _this.manageOptions(newTxt.options, json);
             obj = {...obj, ...options};
         }
@@ -83,6 +91,19 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
 
     return returnedObj;
 
+};
+FormatJSON.prototype.addTags = function(txt, tagName) {
+    var lines = [];
+    txt.forEach(line => {
+        line = line.split(" ")
+        words = [];
+        line.forEach((word, i) => {
+            words.push('<span class="' + tagName + '">' + word + '</span>')
+        });
+        lines.push(words.join(' '))
+    });
+
+    return lines
 };
 FormatJSON.prototype.splitTxt = function(txt, startAt, zone) {
     /* Splits lines if its length higher than the box width. */
