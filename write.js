@@ -424,28 +424,30 @@ Animation.prototype.startSubtitles = function(box) {
         requestAnimationFrame(sub);
     });
 };
-Animation.prototype.mouseOverHiding = function() {
+Animation.prototype.mouseOver = function(hide) {
     return new Promise((resolve, reject) => {
         const _this = this;
+        // var visibility = hide ? 'hidden' : 'visible';
+        var visibility = hide ? 0 : 1;
         var words = document.getElementsByClassName(_this.tagName);
         var wordsLen = words.length;
         var overedWords = 0;
 
-        function hide(elem) {
+        function changeVisibility(elem) {
             let i = Array.prototype.indexOf.call(words, elem.target);
-            var style = words[i].style.visibility;
-            if (style == '') {
-                words[i].style.visibility = 'hidden';
-                words[i].removeEventListener('mouseover', hide);
-                overedWords++;
-                if (overedWords == wordsLen) {
-                    resolve();
-                }
+            // words[i].style.visibility = visibility;
+            words[i].style.opacity = visibility;
+            words[i].removeEventListener('mouseover', changeVisibility);
+            overedWords++;
+            console.log(wordsLen, overedWords);
+            if (overedWords == wordsLen) {
+                console.log('bloulp');
+                resolve();
             }
         }
 
         for (let i = 0; i < wordsLen; i++) {
-            words[i].addEventListener("mouseover", hide);
+            words[i].addEventListener("mouseover", changeVisibility);
         }
     });
 };
