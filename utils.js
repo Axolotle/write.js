@@ -76,6 +76,7 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
 
         if (json.hasOwnProperty('wordIsTag')) {
             newTxt = { txt: _this.addTags(newTxt.txt, json.wordIsTag)};
+            obj.tagName = json.wordIsTag;
         }
 
         obj.txt = newTxt.txt;
@@ -96,7 +97,7 @@ FormatJSON.prototype.addTags = function(txt, tagName) {
     var lines = [];
     txt.forEach(line => {
         line = line.split(" ")
-        words = [];
+        var words = [];
         line.forEach((word, i) => {
             words.push('<span class="' + tagName + '">' + word + '</span>')
         });

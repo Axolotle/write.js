@@ -424,3 +424,28 @@ Animation.prototype.startSubtitles = function(box) {
         requestAnimationFrame(sub);
     });
 };
+Animation.prototype.mouseOverHiding = function() {
+    return new Promise((resolve, reject) => {
+        const _this = this;
+        var words = document.getElementsByClassName(_this.tagName);
+        var wordsLen = words.length;
+        var overedWords = 0;
+
+        function hide(elem) {
+            let i = Array.prototype.indexOf.call(words, elem.target);
+            var style = words[i].style.visibility;
+            if (style == '') {
+                words[i].style.visibility = 'hidden';
+                words[i].removeEventListener('mouseover', hide);
+                overedWords++;
+                if (overedWords == wordsLen) {
+                    resolve();
+                }
+            }
+        }
+
+        for (let i = 0; i < wordsLen; i++) {
+            words[i].addEventListener("mouseover", hide);
+        }
+    });
+};
