@@ -79,6 +79,9 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
             newTxt = { txt: _this.addTags(newTxt.txt, json.wordIsTag)};
             obj.tagName = json.wordIsTag;
         }
+        if (json.hasOwnProperty('notes')) {
+            obj.notes = json.notes;
+        }
 
         obj.txt = newTxt.txt;
         if (newTxt.hasOwnProperty("options") && newTxt.options.length > 0) {

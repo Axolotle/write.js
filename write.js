@@ -456,13 +456,15 @@ Animation.prototype.mouseOver = function(hide) {
 };
 Animation.prototype.overlay = function(box) {
     return new Promise((resolve, reject) => {
+        const _this = this;
         const bg = document.getElementsByTagName('body')[0];
         const div = document.getElementById(box.div);
         window.addEventListener('mousemove', moveClip);
 
         const pointerSkin = {
-            'read': '│<br>│<br><br>───     ───<br><br>│<br>│<br>',
-            'click': ' <br> <br>┃<br>   ━━╋━━   <br>┃<br> <br> <br>'
+            'read': '│<br>│<br><br><br>───         ───<br><br><br>│<br>│<br>',
+            'clickBold': ' <br> <br>┃<br>   ━━╋━━   <br>┃<br> <br> <br>',
+            'click': ' <br> <br>│<br>   ──┼──   <br>│<br> <br> <br>'
         }
 
         const pointer = document.createElement('p');
@@ -474,12 +476,40 @@ Animation.prototype.overlay = function(box) {
         var x = pointer.offsetWidth;
         var y = pointer.offsetHeight;
 
+
+        var noteZone = document.createElement('div');
+        const html = document.getElementsByTagName('html')[0];
+        noteZone.id = 'noteZone';
+        html.appendChild(noteZone);
+
+        const notes = document.getElementsByClassName('notes');
+        for (let i = 0; i < notes.length; i += 1) {
+            notes[i].addEventListener('click', displayNote);
+            notes[i].addEventListener('mouseover', () => {
+                pointer.innerHTML = pointerSkin.click;
+                x = pointer.offsetWidth;
+                y = pointer.offsetHeight;
+            });
+            notes[i].addEventListener("mouseout", () => {
+                pointer.innerHTML = pointerSkin.read;
+                x = pointer.offsetWidth;
+                y = pointer.offsetHeight;
+            });
+        }
+
         function moveClip(e) {
             let pos = 'at ' + e.clientX + 'px ' + e.clientY + 'px';
-            bg.style.clipPath = 'circle(80px ' + pos + ')';
+            bg.style.clipPath = 'circle(100px ' + pos + ')';
             pointer.style.top = (e.clientY - y/2) + 'px';
             pointer.style.left = (e.clientX - x/2) + 'px';
         }
 
+        function displayNote(elem) {
+            let i = Array.prototype.indexOf.call(notes, elem.target);
+            noteZone.innerHTML = _this.notes[i]
+        }
+
+        const nextPage = document.getElementById('nextPage');
+        nextPage.onclick = resolve;
     });
 };
