@@ -114,6 +114,11 @@ Animation.prototype.displayText = function(box) {
         });
     }
 };
+Animation.prototype.insertText = function(box) {
+    // FIXME merge with displayText ?
+    const _this = this;
+    _this.txt.forEach((line, i) => box.insertOnLine(i, 0, line, _this.lineLength[i]));
+};
 Animation.prototype.addWord = function(box, removeListeners) {
     return new Promise ((resolve, reject) => {
         const _this = this;
@@ -439,9 +444,7 @@ Animation.prototype.mouseOver = function(hide) {
             words[i].style.opacity = visibility;
             words[i].removeEventListener('mouseover', changeVisibility);
             overedWords++;
-            console.log(wordsLen, overedWords);
             if (overedWords == wordsLen) {
-                console.log('bloulp');
                 resolve();
             }
         }

@@ -383,6 +383,23 @@ Box.prototype.printOnLine = function(l, i, txt, insert) {
     this.lines[l].innerHTML = newLine;
 
 };
+Box.prototype.insertOnLine = function(l, i, txt, length) {
+    // FIXME merge with printOnLine
+    /* Prints a string on the box at a specified line and index by overwriting
+    to a given length */
+
+    // Adds the margins so the text remains in the writing zone
+    i += this.marginX;
+    l += this.marginY;
+    // Gets previous line content
+    var prevTxt = this.lines[l].innerHTML;
+
+    // Rewrites the line with new content
+    var newLine = prevTxt.substr(0, i) + txt + prevTxt.substr(i + length);
+
+    this.lines[l].innerHTML = newLine;
+
+};
 Box.prototype.addTags = function(tag) {
     /* Adds any tag to the box's writing zone */
 

@@ -75,6 +75,7 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         }
 
         if (json.hasOwnProperty('wordIsTag')) {
+            obj.lineLength = newTxt.txt.map(line => line.length)
             newTxt = { txt: _this.addTags(newTxt.txt, json.wordIsTag)};
             obj.tagName = json.wordIsTag;
         }
