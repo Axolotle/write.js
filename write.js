@@ -458,26 +458,51 @@ Animation.prototype.notesReader = function(cursor) {
     return new Promise((resolve, reject) => {
         const _this = this;
 
-        const pointer = document.createElement('p');
-        pointer.id = 'cursor';
-        pointer.innerHTML = _this.skin.none;
-        _this.div.style.cursor = 'none';
-        _this.div.appendChild(pointer);
-        var x = pointer.offsetWidth;
-        var y = pointer.offsetHeight;
-
-        function followMouse(e) {
-            let pos = 'at ' + e.clientX + 'px ' + e.clientY + 'px';
-            bg.style.clipPath = 'circle(60px ' + pos + ')';
-            pointer.style.top = (e.clientY - y/2) + 'px';
-            pointer.style.left = (e.clientX - x/2) + 'px';
+        function displayNote(elem) {
+            let i = Array.prototype.indexOf.call(links, elem.target);
+            noteZone.innerHTML = _this.notes[i];
+            noteZone.style.display = 'block';
         }
+
+        function initSkinEvents(elem) {
+            elem.addEventListener('mouseover', () => {
+                cursor.updateSkin('hover');
+            });
+            elem.addEventListener("mouseout", () => {
+                cursor.updateSkin('normal');
+            });
+        }
+
+        const noteZone = document.createElement('div');
+        noteZone.id = 'noteZone';
+        const body = document.getElementsByTagName('body')[0];
+        body.appendChild(noteZone);
+
+        noteZone.onclick = () => {
+            noteZone.style.display = 'none';
+        };
+
+        const links = document.getElementsByClassName('notes');
+        const linksLen = links.length
+        for (let i = 0; i < linksLen; i++) {
+            links[i].addEventListener('click', displayNote);
+            initSkinEvents(links[i]);
+        }
+
+
+        const nextPage = document.getElementById('nextPage');
+        nextPage.onclick = () => {
+            body.removeChild(noteZone);
+            resolve();
+        }
+        initSkinEvents(nextPage);
+
     });
 };
 
 function Viewfinder(divName, size, normal, hover) {
     let skin = {
-        'none': '',
+        'none': ' <br> <br> <br>           <br> <br> <br> <br>',
         'read': '│<br>│<br><br>───       ───<br><br>│<br>│<br>',
         'readLarge': '│<br>│<br><br><br>───         ───<br><br><br>│<br>│<br>',
         'readBold': '┃<br>┃<br><br>━━━       ━━━<br><br>┃<br>┃<br>',
@@ -496,7 +521,6 @@ Viewfinder.prototype.initClipPath = function(duration) {
     return new Promise((resolve, reject) => {
         const _this = this;
         var size = _this.size;
-        _this.div.style.cursor = 'none';
 
         function anim(timeStamp) {
             if (animStart === null) animStart = timeStamp;
@@ -509,7 +533,7 @@ Viewfinder.prototype.initClipPath = function(duration) {
             }
             else {
                 _this.div.style.clipPath = 'circle(' + size + 'px)';
-                _this.followMouse();
+                _this.initPointer();
                 resolve();
             }
         }
@@ -526,62 +550,34 @@ Viewfinder.prototype.initClipPath = function(duration) {
         }
         else {
             _this.div.style.clipPath = 'circle(' + size + 'px)';
-            _this.followMouse();
+            _this.initPointer();
             resolve();
         }
     });
 };
+Viewfinder.prototype.initPointer = function() {
+    this.div.style.cursor = 'none';
+    const pointer = document.createElement('p');
+    pointer.id = 'cursor';
+    pointer.innerHTML = this.skin.normal;
+    this.div.appendChild(pointer);
+    this.pointer = pointer;
+    this.followMouse();
+};
 Viewfinder.prototype.followMouse = function() {
     const _this = this;
     window.addEventListener('mousemove', moveClip);
+    var x = _this.pointer.offsetWidth / 2;
+    var y = _this.pointer.offsetHeight / 2;
 
     function moveClip(e) {
+        // console.log(e.target.nodeName);
         let pos = 'at ' + e.clientX + 'px ' + e.clientY + 'px';
         _this.div.style.clipPath = 'circle(' + _this.size + 'px ' + pos + ')';
-        // pointer.style.top = (e.clientY - y/2) + 'px';
-        // pointer.style.left = (e.clientX - x/2) + 'px';
+        _this.pointer.style.top = (e.clientY - y) + 'px';
+        _this.pointer.style.left = (e.clientX - x) + 'px';
     }
 };
 Viewfinder.prototype.updateSkin = function(skin) {
-
-};
-Viewfinder.prototype.overlay = function() {
-    return new Promise((resolve, reject) => {
-        var noteZone = document.createElement('div');
-        const html = document.getElementsByTagName('body')[0];
-        noteZone.id = 'noteZone';
-        noteZone.onclick = () => {
-            noteZone.innerHTML = '';
-        };
-        html.appendChild(noteZone);
-
-        const notes = document.getElementsByClassName('notes');
-        for (let i = 0; i < notes.length; i += 1) {
-            notes[i].addEventListener('click', displayNote);
-            notes[i].addEventListener('mouseover', () => {
-                pointer.innerHTML = pointerSkin.read;
-                x = pointer.offsetWidth;
-                y = pointer.offsetHeight;
-            });
-            notes[i].addEventListener("mouseout", () => {
-                pointer.innerHTML = pointerSkin.none;
-            });
-        }
-
-        function moveClip(e) {
-            let pos = 'at ' + e.clientX + 'px ' + e.clientY + 'px';
-            bg.style.clipPath = 'circle(60px ' + pos + ')';
-            pointer.style.top = (e.clientY - y/2) + 'px';
-            pointer.style.left = (e.clientX - x/2) + 'px';
-        }
-
-        function displayNote(elem) {
-            let i = Array.prototype.indexOf.call(notes, elem.target);
-            noteZone.innerHTML = _this.notes[i];
-        }
-
-
-        const nextPage = document.getElementById('nextPage');
-        nextPage.onclick = resolve;
-    });
+    this.pointer.innerHTML = this.skin[skin];
 };
