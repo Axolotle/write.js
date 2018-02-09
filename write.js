@@ -454,53 +454,19 @@ Animation.prototype.mouseOver = function(hide) {
         }
     });
 };
-
-function Viewfinder() {
-    this.skin = {
-        'none': '',
-        'read': '│<br>│<br><br>───       ───<br><br>│<br>│<br>',
-        'readLarge': '│<br>│<br><br><br>───         ───<br><br><br>│<br>│<br>',
-        'readBold': '┃<br>┃<br><br>━━━       ━━━<br><br>┃<br>┃<br>',
-        'click': ' <br> <br>│<br>   ──┼──   <br>│<br> <br> <br>',
-        'clickBold': ' <br> <br>┃<br>   ━━╋━━   <br>┃<br> <br> <br>'
-    };
-    this.div = document.getElementById('overlay');
-}
-Viewfinder.prototype.initPointer = function(size, dur) {
+Animation.prototype.notesReader = function(cursor) {
     return new Promise((resolve, reject) => {
         const _this = this;
 
-        function anim(timeStamp) {
-            if (animStart === null) animStart = timeStamp;
-            var runtime = timeStamp - animStart;
-            var progress = runtime / dur;
-            var actualSize = maxSize - step * runtime;
-            if (runtime < dur) {
-                _this.div.style.clipPath = 'circle(' + actualSize + 'px)'
-                requestAnimationFrame(anim);
-            }
-            else {
-                _this.div.style.clipPath = 'circle(' + size + 'px)';
-                resolve();
-            }
-        }
+        const pointer = document.createElement('p');
+        pointer.id = 'cursor';
+        pointer.innerHTML = _this.skin.none;
+        _this.div.style.cursor = 'none';
+        _this.div.appendChild(pointer);
+        var x = pointer.offsetWidth;
+        var y = pointer.offsetHeight;
 
-        if (dur) {
-            let main = document.getElementsByTagName('main')[0];
-            let x = main.offsetWidth;
-            let y = main.offsetHeight;
-            // get half of the box's diagonal
-            var maxSize = Math.sqrt(x*x + y*y) / 2;
-            var animStart = null;
-            var step = (maxSize - size) / dur;
-            requestAnimationFrame(anim);
-        }
-        else {
-            _this.div.style.clipPath = 'circle(' + size + 'px)';
-            resolve();
-        }
-
-        function moveClip(e) {
+        function followMouse(e) {
             let pos = 'at ' + e.clientX + 'px ' + e.clientY + 'px';
             bg.style.clipPath = 'circle(60px ' + pos + ')';
             pointer.style.top = (e.clientY - y/2) + 'px';
@@ -508,31 +474,79 @@ Viewfinder.prototype.initPointer = function(size, dur) {
         }
     });
 };
-Viewfinder.prototype.overlay = function() {
+
+function Viewfinder(divName, size, normal, hover) {
+    let skin = {
+        'none': '',
+        'read': '│<br>│<br><br>───       ───<br><br>│<br>│<br>',
+        'readLarge': '│<br>│<br><br><br>───         ───<br><br><br>│<br>│<br>',
+        'readBold': '┃<br>┃<br><br>━━━       ━━━<br><br>┃<br>┃<br>',
+        'click': ' <br> <br>│<br>   ──┼──   <br>│<br> <br> <br>',
+        'clickBold': ' <br> <br>┃<br>   ━━╋━━   <br>┃<br> <br> <br>'
+    };
+
+    this.skin = {
+        'normal': skin[normal],
+        'hover': skin[hover]
+    };
+    this.div = document.getElementById(divName);
+    this.size = size;
+}
+Viewfinder.prototype.initClipPath = function(duration) {
     return new Promise((resolve, reject) => {
         const _this = this;
-        const bg = document.getElementById('overlay');
-        window.addEventListener('mousemove', moveClip);
+        var size = _this.size;
+        _this.div.style.cursor = 'none';
 
-        const pointerSkin = {
-            'readLarge': '│<br>│<br><br><br>───         ───<br><br><br>│<br>│<br>',
-            'read': '│<br>│<br><br>───       ───<br><br>│<br>│<br>',
-            'readBold': '┃<br>┃<br><br>━━━       ━━━<br><br>┃<br>┃<br>',
-            'none': '',
-            'clickBold': ' <br> <br>┃<br>   ━━╋━━   <br>┃<br> <br> <br>',
-            'click': ' <br> <br>│<br>   ──┼──   <br>│<br> <br> <br>'
+        function anim(timeStamp) {
+            if (animStart === null) animStart = timeStamp;
+            var runtime = timeStamp - animStart;
+            var progress = runtime / duration;
+            var actualSize = maxSize - step * runtime;
+            if (runtime < duration) {
+                _this.div.style.clipPath = 'circle(' + actualSize + 'px)'
+                requestAnimationFrame(anim);
+            }
+            else {
+                _this.div.style.clipPath = 'circle(' + size + 'px)';
+                _this.followMouse();
+                resolve();
+            }
         }
 
-        const pointer = document.createElement('p');
-        pointer.id = 'cursor';
-        pointer.innerHTML = pointerSkin.none;
+        if (duration) {
+            let main = document.getElementsByTagName('main')[0];
+            let x = main.offsetWidth;
+            let y = main.offsetHeight;
+            // get half of the box's diagonal
+            var maxSize = Math.sqrt(x*x + y*y) / 2;
+            var animStart = null;
+            var step = (maxSize - size) / duration;
+            requestAnimationFrame(anim);
+        }
+        else {
+            _this.div.style.clipPath = 'circle(' + size + 'px)';
+            _this.followMouse();
+            resolve();
+        }
+    });
+};
+Viewfinder.prototype.followMouse = function() {
+    const _this = this;
+    window.addEventListener('mousemove', moveClip);
 
-        // bg.style.cursor = 'none';
-        bg.appendChild(pointer);
-        var x = pointer.offsetWidth;
-        var y = pointer.offsetHeight;
+    function moveClip(e) {
+        let pos = 'at ' + e.clientX + 'px ' + e.clientY + 'px';
+        _this.div.style.clipPath = 'circle(' + _this.size + 'px ' + pos + ')';
+        // pointer.style.top = (e.clientY - y/2) + 'px';
+        // pointer.style.left = (e.clientX - x/2) + 'px';
+    }
+};
+Viewfinder.prototype.updateSkin = function(skin) {
 
-
+};
+Viewfinder.prototype.overlay = function() {
+    return new Promise((resolve, reject) => {
         var noteZone = document.createElement('div');
         const html = document.getElementsByTagName('body')[0];
         noteZone.id = 'noteZone';
