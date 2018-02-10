@@ -463,14 +463,19 @@ Animation.prototype.notesReader = function(cursor) {
             noteZone.innerHTML = _this.notes[i];
             noteZone.style.display = 'block';
         }
-
+        function hover() {
+            cursor.updateSkin('hover');
+        }
+        function normal() {
+            cursor.updateSkin('normal');
+        }
         function initSkinEvents(elem) {
-            elem.addEventListener('mouseover', () => {
-                cursor.updateSkin('hover');
-            });
-            elem.addEventListener("mouseout", () => {
-                cursor.updateSkin('normal');
-            });
+            elem.addEventListener('mouseover', hover, true);
+            elem.addEventListener("mouseout", normal, true);
+        }
+        function removeSkinEvents(elem) {
+            elem.removeEventListener('mouseover', hover, true);
+            elem.removeEventListener("mouseout", normal, true);
         }
 
         const noteZone = document.createElement('div');
@@ -489,13 +494,31 @@ Animation.prototype.notesReader = function(cursor) {
             initSkinEvents(links[i]);
         }
 
-
         const nextPage = document.getElementById('nextPage');
-        nextPage.onclick = () => {
-            body.removeChild(noteZone);
-            resolve();
-        }
         initSkinEvents(nextPage);
+
+        function stop() {
+            try {
+                body.removeChild(noteZone);
+            } catch {
+                return
+            }
+            for (let i = 0; i < linksLen; i++) {
+                links[i].removeEventListener('click', displayNote);
+                removeSkinEvents(links[i]);
+            }
+            removeSkinEvents(nextPage);
+            nextPage.removeEventListener('click', stop);
+        }
+
+        nextPage.addEventListener('click', () => {
+            stop();
+            resolve();
+        });
+        window.addEventListener('stop', () => {
+            stop();
+            reject("User triggered a stop event");
+        });
 
     });
 };
@@ -569,9 +592,17 @@ Viewfinder.prototype.followMouse = function() {
     window.addEventListener('mousemove', moveClip);
     var x = _this.pointer.offsetWidth / 2;
     var y = _this.pointer.offsetHeight / 2;
+    window.addEventListener("deactivate", stop);
+    window.addEventListener("stop", stop);
+
+    function stop() {
+        window.removeEventListener("mousemove", moveClip);
+        _this.div.style.cursor = 'auto';
+        _this.div.style.clipPath = 'none';
+        window.removeEventListener("deactivate", stop);
+    }
 
     function moveClip(e) {
-        // console.log(e.target.nodeName);
         let pos = 'at ' + e.clientX + 'px ' + e.clientY + 'px';
         _this.div.style.clipPath = 'circle(' + _this.size + 'px ' + pos + ')';
         _this.pointer.style.top = (e.clientY - y) + 'px';
@@ -580,4 +611,8 @@ Viewfinder.prototype.followMouse = function() {
 };
 Viewfinder.prototype.updateSkin = function(skin) {
     this.pointer.innerHTML = this.skin[skin];
+};
+Viewfinder.prototype.deactivate = function(skin) {
+    window.dispatchEvent(new Event("deactivate"));
+    this.div.removeChild(this.pointer);
 };
