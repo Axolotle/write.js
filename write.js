@@ -102,10 +102,10 @@ Animation.prototype.writeText = function(box) {
         requestAnimationFrame(writing);
     });
 };
-Animation.prototype.displayText = function(box) {
+Animation.prototype.displayText = function(box, txt) {
     const _this = this;
-
-    _this.txt.forEach((line, i) => box.printOnLine(i, 0, line));
+    txt = txt || this.txt;
+    txt.forEach((line, i) => box.printOnLine(i, 0, line));
 
     if (_this.tags) {
         // FIXME rework the tag stuff
@@ -500,7 +500,7 @@ Animation.prototype.notesReader = function(cursor) {
         function stop() {
             try {
                 body.removeChild(noteZone);
-            } catch {
+            } catch (e) {
                 return
             }
             for (let i = 0; i < linksLen; i++) {
@@ -521,6 +521,18 @@ Animation.prototype.notesReader = function(cursor) {
         });
 
     });
+};
+Animation.prototype.initMap = function (box) {
+    var x = Math.round(box.x / 2) - box.marginX;
+    var y = Math.round(box.y / 2) - box.marginY;
+    var mapX = 0;
+    var mapY = 0;
+    const maxX = box.x - box.marginX * 2;
+    const maxY = box.y - box.marginY * 2;
+
+    var map = this.txt.splice(mapY, mapY + maxY).map(line => line.slice(mapX, mapX + maxX));
+    this.displayText(box, map);
+    box.printOnLine(y, x, 'b')
 };
 
 function Viewfinder(divName, size, normal, hover) {

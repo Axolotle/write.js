@@ -72,7 +72,8 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
             return { txt: _this.subtitle(txt) };
         } else if (format == "none") {
             newTxt = { txt: txt };
-        }
+        } 
+
 
         if (json.hasOwnProperty('wordIsTag')) {
             obj.lineLength = newTxt.txt.map(line => line.length)
