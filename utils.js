@@ -70,10 +70,12 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
             obj.pointOfNoReturn = json.pointOfNoReturn;
         } else if (format == "subtitle") {
             return { txt: _this.subtitle(txt) };
-        } else if (format == "none") {
+        } else if (format == "img") {
             newTxt = { txt: txt };
-        } 
-
+            if (json.hasOwnProperty('collision')) {
+                obj.collision = json.collision;
+            }
+        }
 
         if (json.hasOwnProperty('wordIsTag')) {
             obj.lineLength = newTxt.txt.map(line => line.length)

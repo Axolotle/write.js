@@ -524,26 +524,36 @@ Animation.prototype.notesReader = function(cursor) {
 };
 Animation.prototype.initMap = function (box) {
     const _this = this;
+    const map = _this.txt;
+    const col = _this.collision
     const mapMaxX = _this.txt[0].length;
     const mapMaxY = _this.txt.length;
     const maxX = box.x - box.marginX * 2;
     const maxY = box.y - box.marginY * 2;
+    const middleX = Math.round(box.x / 2) - box.marginX;
+    const middleY = Math.round(box.y / 2) - box.marginY;
 
-    var x = Math.round(box.x / 2) - box.marginX;
-    var y = Math.round(box.y / 2) - box.marginY;
+    var x = middleX;
+    var y = middleY;
     var mapX = 0;
     var mapY = 0;
     window.addEventListener('keypress', move);
 
     function move(e) {
-        if (e.keyCode == 39 && mapX < mapMaxX) {
+        var key = e.keyCode;
+
+        if (key == 39 && mapX < mapMaxX && col[y][x+1] != '▉') {
             mapX += 1;
-        } else if (e.keyCode == 37 && mapX > 0) {
+            x += 1;
+        } else if (key == 37 && mapX > 0 && col[y][x-1] != '▉') {
             mapX -= 1;
-        } else if (e.keyCode == 38 && mapY > 0) {
+            x -= 1;
+        } else if (key == 38 && mapY > 0 && col[y-1][x] != '▉') {
             mapY -= 1;
-        } else if (e.keyCode == 40 && mapY < mapMaxY) {
+            y -= 1;
+        } else if (key == 40 && mapY < mapMaxY && col[y+1][x] != '▉') {
             mapY += 1;
+            y += 1;
         } else {
             return;
         }
@@ -551,10 +561,10 @@ Animation.prototype.initMap = function (box) {
     }
 
     function update() {
-        _this.txt.slice(mapY, mapY + maxY).forEach((line, l) =>  {
+        map.slice(mapY, mapY + maxY).forEach((line, l) =>  {
             box.printOnLine(l, 0, line.slice(mapX, mapX + maxX));
         });
-        box.printOnLine(y, x, 'b');
+        box.printOnLine(middleY, middleX, '▉');
     }
 
     update()
