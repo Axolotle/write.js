@@ -523,16 +523,41 @@ Animation.prototype.notesReader = function(cursor) {
     });
 };
 Animation.prototype.initMap = function (box) {
+    const _this = this;
+    const mapMaxX = _this.txt[0].length;
+    const mapMaxY = _this.txt.length;
+    const maxX = box.x - box.marginX * 2;
+    const maxY = box.y - box.marginY * 2;
+
     var x = Math.round(box.x / 2) - box.marginX;
     var y = Math.round(box.y / 2) - box.marginY;
     var mapX = 0;
     var mapY = 0;
-    const maxX = box.x - box.marginX * 2;
-    const maxY = box.y - box.marginY * 2;
+    window.addEventListener('keypress', move);
 
-    var map = this.txt.splice(mapY, mapY + maxY).map(line => line.slice(mapX, mapX + maxX));
-    this.displayText(box, map);
-    box.printOnLine(y, x, 'b')
+    function move(e) {
+        if (e.keyCode == 39 && mapX < mapMaxX) {
+            mapX += 1;
+        } else if (e.keyCode == 37 && mapX > 0) {
+            mapX -= 1;
+        } else if (e.keyCode == 38 && mapY > 0) {
+            mapY -= 1;
+        } else if (e.keyCode == 40 && mapY < mapMaxY) {
+            mapY += 1;
+        } else {
+            return;
+        }
+        update();
+    }
+
+    function update() {
+        _this.txt.slice(mapY, mapY + maxY).forEach((line, l) =>  {
+            box.printOnLine(l, 0, line.slice(mapX, mapX + maxX));
+        });
+        box.printOnLine(y, x, 'b');
+    }
+
+    update()
 };
 
 function Viewfinder(divName, size, normal, hover) {
