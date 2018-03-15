@@ -68,68 +68,56 @@ Box.prototype.getCharacterDimension = function() {
 Box.prototype.getBoxSize = function (opt) {
     /* Returns the box size depending of the options given by the json object */
 
-    var _this = this;
-    var maxX, maxY, minX, minY;
-
-    if (opt.minX && typeof opt.minX == "string") {
-        // If the minX option is a word or en sentence, get its length
-        minX = opt.minX.length;
-    } else {
-        minX = opt.minX || this.marginX * 2;
-    }
-    minY = opt.minY || this.marginY * 2;
-
-    if (this.maxW < minX || this.maxH < minY) {
-        // Required minimum size can't be obtained
-        return null;
-    }
-
-    // Define min & max from given values and page dimensions
-    maxX = opt.maxX && opt.maxX <= this.maxW ? opt.maxX : this.maxW;
-    maxY = opt.maxY && opt.maxY <= this.maxH ? opt.maxY : this.maxH;
-
-
     function fromText(words, x) {
-        // Returns dimensions so a given text can be fully displayed in the
-        // user's window. An ideal x value is required to set the y value.
+        /* Returns dimensions so a given text can be fully displayed in the
+           user's window. A min x value is required to set the y value. */
 
-        var line = 1,
-            index = 0,
-            dontEscape = ["?", "!", ":", ";"];
+        // Defines characters that should'nt be the first or the last
+        // character of a line
+        const nvrFirst = ["?", "!", ":", ";", "»"];
+        const nvrLast = ["¿", "¡", "«"];
 
-        // Margins must be substracted from the usable width
-        var y = 1 + _this.marginY * 2;
-        var margins = _this.marginX * 2;
-
-        if (x > maxX) {
-            // Window is probably too small to fit the text
-            return null;
-        }
-
-        wordsLength = words.length;
+        var y = 1 + margsY;
+        var lineLen = 0;
         // Simulates text formatting to get the height of the box
-        for (var i = 0; i < wordsLength; i++) {
+        for (let i = 0, word; word = words[i]; i++) {
             if (y > maxY) {
-                // Box is already higher than the window, try with a wider x
-                return fromText(words, ++x);
+                // Box is already higher than the max height, try with a wider x
+                if (x <= maxX) {
+                    return fromText(words, x + 1);
+                }
+                else {
+                    return null;
+                }
             }
+            if (word === "».") {
+                console.log(word);
+                console.log(nvrFirst.indexOf(word) > -1);
+            }
+            let wordLen = word.length;
+            let nextLineLen = lineLen === 0 ? wordLen : lineLen + 1 + wordLen;
 
-            let length = words[i].length;
-            let width = index == 0 ? length : index + 1 + length;
-
-            if (words[i].indexOf("\n") > -1) {
-                if (width - "\n".length > x - margins) y += 2;
-                else y++;
-                index = 0;
-            } else if (width <= x - margins) {
-                index += index == 0 ? length : 1 + length;
-            } else if (dontEscape.indexOf(words[i]) > -1) {
-                var lastWord = words[i-1];
-                index = lastWord.length + 1 + length;
-                y++;
-            } else {
-                index = length;
-                y++;
+            // TODO add the possibility of dealing with '&nbsp;' and '&#8239;' spaces
+            if (word.indexOf("\n") > -1) {
+                if (nextLineLen - "\n".length > x - margsX) {
+                    y += 2;
+                }
+                else {
+                    y += 1;
+                }
+                lineLen = 0;
+            }
+            else if (nextLineLen <= x - margsX) {
+                lineLen = nextLineLen;
+            }
+            else {
+                if (nvrFirst.indexOf(word) > -1 || nvrLast.indexOf(words[i-1]) > -1) {
+                    lineLen = words[i-1].length + 1 + wordLen;
+                }
+                else {
+                    lineLen = wordLen;
+                }
+                y += 1;
             }
         }
 
@@ -137,47 +125,59 @@ Box.prototype.getBoxSize = function (opt) {
     }
 
     function fromRatio(ratio, y) {
-        // Returns dimensions so that the box is homothetic at a given ratio.
+        // Returns dimensions so that the box is homothetic to a given ratio.
         var x = Math.round(y * ratio);
 
         if (x <= maxX && x >= minX && y <= maxY && y >= minY){
             return {"x" : x, "y" : y};
-        } else if (x > maxX && y - 1 >= minY) {
-            return fromRatio(ratio, --y);
-        } else return null;
-    }
-
-    function fromMinMax(x, y) {
-        // Returns dimensions so that each axis is between the min & max values.
-        if (x <= maxX && x >= minX && y <= maxY && y >= minY){
-            return {"x" : x, "y" : y};
-        } else if (x > maxX && y > maxY) {
-            return fromMinMax(--x, --y);
-        } else if (x > maxX) {
-            return fromMinMax(--x, y);
-        } else if (y > maxY) {
-            return fromMinMax(x, --y);
-        } else {
+        }
+        else if (x > maxX && y - 1 >= minY) {
+            return fromRatio(ratio, y - 1);
+        }
+        else {
             return null;
         }
     }
 
+    const _this = this;
+    const evenX = opt.evenX;
+    const evenY = opt.evenX;
+    const margsX = _this.marginX * 2;
+    const margsY = _this.marginY * 2;
 
-    if (opt.longestText) {
-        var words = opt.longestText.split(" ");
+    var maxX = opt.maxX > _this.maxW ? _this.maxW : opt.maxX || _this.maxW;
+    var maxY = opt.maxY > _this.maxH ? _this.maxH : opt.maxY || _this.maxH;
+    var minX = opt.minX < margsX ? margsX : opt.minX || margsX;
+    var minY = opt.minY < margsY ? margsY : opt.minY || margsY;
 
-        return fromText(words, opt.idealX);
-    } else if (opt.ratio) {
-        // To get a homothetic box, given ratio must be added to the
-        // ratio of the font size.
-        var charaSize = this.getCharacterDimension();
-        var charaRatio = charaSize.h/charaSize.w;
-        var givenRatio = opt.ratio[0]/opt.ratio[1];
+    if (maxX < minX || maxY < minY) {
+        return null;
+    }
+
+    if (opt.hasOwnProperty("longestText")) {
+        let words = opt.longestText.split(" ");
+        let longestWord = words.reduce((a, b) => {
+            if (b.length > a.length) {
+                return b;
+            } else {
+                return a;
+            }
+        }).length;
+        if (longestWord > minX) {
+            return fromText(words, longestWord);
+        }
+        else {
+            return fromText(words, minX);
+        }
+    }
+    else if (opt.hasOwnProperty("ratio")) {
+        var charaRatio = _this.charaH / this.charaW;
+        var givenRatio = opt.ratio[0] / opt.ratio[1];
         var ratio = givenRatio * charaRatio;
-
         return fromRatio(ratio, maxY);
-    } else {
-        return fromMinMax(maxX, maxY);
+    }
+    else {
+        return {"x" : maxX, "y" : maxY};
     }
 
 };
