@@ -90,10 +90,7 @@ Box.prototype.getBoxSize = function (opt) {
                     return null;
                 }
             }
-            if (word === "».") {
-                console.log(word);
-                console.log(nvrFirst.indexOf(word) > -1);
-            }
+
             let wordLen = word.length;
             let nextLineLen = lineLen === 0 ? wordLen : lineLen + 1 + wordLen;
 
@@ -129,7 +126,7 @@ Box.prototype.getBoxSize = function (opt) {
         var x = Math.round(y * ratio);
 
         if (x <= maxX && x >= minX && y <= maxY && y >= minY){
-            return {"x" : x, "y" : y};
+            return checkOddOrEven(x, y);
         }
         else if (x > maxX && y - 1 >= minY) {
             return fromRatio(ratio, y - 1);
@@ -139,9 +136,21 @@ Box.prototype.getBoxSize = function (opt) {
         }
     }
 
+    function checkOddOrEven(x, y) {
+        if (evenX !== undefined || evenY !== undefined) {
+            if ((evenX === true && x % 2 != 0) || (evenX === false && x % 2 == 0)) {
+                x -= 1;
+            }
+            if ((evenY === true && y % 2 != 0) || (evenY === false && y % 2 == 0)) {
+                y -= 1;
+            }
+        }
+        return {"x" : x, "y" : y};
+    }
+
     const _this = this;
     const evenX = opt.evenX;
-    const evenY = opt.evenX;
+    const evenY = opt.evenY;
     const margsX = _this.marginX * 2;
     const margsY = _this.marginY * 2;
 
@@ -163,6 +172,7 @@ Box.prototype.getBoxSize = function (opt) {
                 return a;
             }
         }).length;
+
         if (longestWord > minX) {
             return fromText(words, longestWord);
         }
@@ -177,7 +187,7 @@ Box.prototype.getBoxSize = function (opt) {
         return fromRatio(ratio, maxY);
     }
     else {
-        return {"x" : maxX, "y" : maxY};
+        return checkOddOrEven(maxX, maxY);
     }
 
 };
