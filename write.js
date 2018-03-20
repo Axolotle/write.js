@@ -524,47 +524,86 @@ Animation.prototype.notesReader = function(cursor) {
 };
 Animation.prototype.initMap = function (box) {
     const _this = this;
-    const map = _this.txt;
-    const col = _this.collision
-    const mapMaxX = _this.txt[0].length;
-    const mapMaxY = _this.txt.length;
+    var map = _this.txt;//.map(line => line.split(""));
+    const info = _this.collision;
+    const mapMaxX = map[0].length;
+    const mapMaxY = map.length;
     const maxX = box.x - box.marginX * 2;
     const maxY = box.y - box.marginY * 2;
     const middleX = Math.round(box.x / 2) - box.marginX;
     const middleY = Math.round(box.y / 2) - box.marginY;
 
-    var x = middleX;
-    var y = middleY;
-    var mapX = 0;
-    var mapY = 0;
-    window.addEventListener('keypress', move);
+    var mapX = 10;
+    var mapY = 100;
+    var x = middleX + mapX;
+    var y = middleY + mapY;
+
+    window.addEventListener("keypress", move);
 
     function move(e) {
         var key = e.keyCode;
+        if ([37, 38, 39, 40].indexOf(key) == -1) {
+            return;
+        }
+        e.preventDefault();
 
-        if (key == 39 && mapX < mapMaxX && col[y][x+1] != '▉') {
+        if (key == 39 && x < mapMaxX - 1 && info[y][x+1] != "▉") {
+            // right
             mapX += 1;
             x += 1;
-        } else if (key == 37 && mapX > 0 && col[y][x-1] != '▉') {
+        } else if (key == 37 && x > 0 && info[y][x-1] != "▉") {
+            // left
             mapX -= 1;
             x -= 1;
-        } else if (key == 38 && mapY > 0 && col[y-1][x] != '▉') {
+        } else if (key == 38 && y > 0 && info[y-1][x] != "▉") {
             mapY -= 1;
             y -= 1;
-        } else if (key == 40 && mapY < mapMaxY && col[y+1][x] != '▉') {
+        } else if (key == 40 && y < mapMaxY - 1 && info[y+1][x] != "▉") {
             mapY += 1;
             y += 1;
         } else {
             return;
         }
+        console.log(mapX +'/' +mapMaxX, mapY + '/' + mapMaxY, 'persoX:'+x, 'persoY:'+y,);
         update();
     }
 
     function update() {
-        map.slice(mapY, mapY + maxY).forEach((line, l) =>  {
-            box.printOnLine(l, 0, line.slice(mapX, mapX + maxX));
-        });
-        box.printOnLine(middleY, middleX, '▉');
+        var portion = getMapPortion();
+        portion[middleY] = replaceStrAt(portion[middleY], middleX, "▉");
+
+        for (let l = 0; l < maxY; l++) {
+            box.printOnLine(l, 0, portion[l]);
+        }
+    }
+
+    function getMapPortion() {
+        function getExtraLines(quantity) {
+            return Array(quantity).fill(" ".repeat(maxX));
+        }
+
+        function adaptX(portion) {
+            return portion.map(line => {
+                if (mapX < 0) {
+                    return " ".repeat(mapX * -1) + line.slice(0, mapX + maxX);
+                } else if (mapX + maxX > mapMaxX) {
+                    return line.slice(mapX, mapX + maxX) + " ".repeat((mapX + maxX) - mapMaxX);
+                } else {
+                    return line.slice(mapX, mapX + maxX);
+                }
+            });
+        }
+
+        if (mapY < 0) {
+            let portion = adaptX(map.slice(0, mapY + maxY));
+            return getExtraLines(mapY * -1).concat(portion);
+        } else if (mapY + maxY > mapMaxY) {
+            let portion = adaptX(map.slice(mapY, mapMaxY));
+            return portion.concat(getExtraLines((mapY + maxY) - mapMaxY));
+        } else {
+            return adaptX(map.slice(mapY, mapY + maxY));
+        }
+
     }
 
     update()

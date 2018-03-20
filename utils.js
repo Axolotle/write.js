@@ -13,6 +13,10 @@ function readJSONFile(url) {
     });
 }
 
+function replaceStrAt(str, index, content) {
+    return str.substr(0, index) + content + str.substr(index + content.length);
+}
+
 function FormatJSON(x, y, marginX, marginY) {
     this.x = x;
     this.y = y;
@@ -71,9 +75,9 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         } else if (format == "subtitle") {
             return { txt: _this.subtitle(txt) };
         } else if (format == "img") {
-            newTxt = { txt: txt };
+            newTxt = { txt: txt[0].split("\n") };
             if (json.hasOwnProperty('collision')) {
-                obj.collision = json.collision;
+                obj.collision = json.collision.split("\n");
             }
         }
 
