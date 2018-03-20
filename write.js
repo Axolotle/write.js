@@ -523,8 +523,9 @@ Animation.prototype.notesReader = function(cursor) {
     });
 };
 Animation.prototype.initMap = function (box) {
+    // TODO need to be a separate object prototype with less side effect functions
     const _this = this;
-    var map = _this.txt;//.map(line => line.split(""));
+    var map = _this.txt;
     const info = _this.collision;
     const mapMaxX = map[0].length;
     const mapMaxY = map.length;
@@ -537,6 +538,19 @@ Animation.prototype.initMap = function (box) {
     var mapY = 100;
     var x = middleX + mapX;
     var y = middleY + mapY;
+
+    var room = {
+        symbol: "a",
+        line: maxY - 2,
+        txt: " Zone : a ",
+        tag: {
+            type: "s",
+            line: maxY - 2,
+            open: 2,
+            close: " Zone : a ".length + 2,
+        },
+    };
+
 
     window.addEventListener("keypress", move);
 
@@ -556,25 +570,36 @@ Animation.prototype.initMap = function (box) {
             mapX -= 1;
             x -= 1;
         } else if (key == 38 && y > 0 && info[y-1][x] != "▉") {
+            // down
             mapY -= 1;
             y -= 1;
         } else if (key == 40 && y < mapMaxY - 1 && info[y+1][x] != "▉") {
+            // up
             mapY += 1;
             y += 1;
-        } else {
-            return;
         }
+
+        let symbol = info[y][x];
+        if ([" ", "▒"].indexOf(symbol) == -1 && room.symbol != symbol) {
+            room.symbol = symbol;
+            room.txt = " Zone : " + (_this.rooms[symbol] || symbol) + " ";
+            room.tag.close = room.txt.length + room.tag.open;
+        }
+
         console.log(mapX +'/' +mapMaxX, mapY + '/' + mapMaxY, 'persoX:'+x, 'persoY:'+y,);
         update();
     }
 
     function update() {
-        var portion = getMapPortion();
+        let portion = getMapPortion();
         portion[middleY] = replaceStrAt(portion[middleY], middleX, "▉");
+        portion[room.line] = replaceStrAt(portion[room.line], 2, room.txt);
 
+        box.removeTags(room.line);
         for (let l = 0; l < maxY; l++) {
             box.printOnLine(l, 0, portion[l]);
         }
+        box.addTags(room.tag);
     }
 
     function getMapPortion() {

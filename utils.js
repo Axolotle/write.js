@@ -79,6 +79,9 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
             if (json.hasOwnProperty('collision')) {
                 obj.collision = json.collision.split("\n");
             }
+            if (json.hasOwnProperty('rooms')) {
+                obj.rooms = json.rooms;
+            }
         }
 
         if (json.hasOwnProperty('wordIsTag')) {
