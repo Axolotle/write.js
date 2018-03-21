@@ -533,6 +533,7 @@ Animation.prototype.initMap = function (box) {
     const maxY = box.y - box.marginY * 2;
     const middleX = Math.round(box.x / 2) - box.marginX;
     const middleY = Math.round(box.y / 2) - box.marginY;
+    const nonWalkable = ["▉"];
 
     var mapX = 10;
     var mapY = 100;
@@ -552,34 +553,53 @@ Animation.prototype.initMap = function (box) {
     };
 
 
-    window.addEventListener("keypress", move);
+    window.addEventListener("keydown", checkKeys);
 
-    function move(e) {
-        var key = e.keyCode;
-        if ([37, 38, 39, 40].indexOf(key) == -1) {
+    function checkKeys(e) {
+        const key = e.key || e.keyIdentifier || e.keyCode;
+        var action, nextSymbol;
+        // console.log(e.key, e.keyIdentifier, e.keyCode);
+
+        if (["ArrowLeft", "Left", 37].indexOf(key) > -1) {
+            action = "left";
+            nextSymbol = info[y][x-1];
+        } else if (["ArrowUp", "Up", 38].indexOf(key) > -1) {
+            action = "up";
+            nextSymbol = info[y-1][x];
+        } else if (["ArrowRight", "Right", 39].indexOf(key) > -1) {
+            action = "right";
+            nextSymbol = info[y][x+1];
+        } else if (["ArrowDown", "Down", 40].indexOf(key) > -1) {
+            action = "down";
+            nextSymbol = info[y+1][x];
+        } else if ([" ", "U+0020", 32].indexOf(key) > -1) {
+            action = "action";
+            return;
+        } else {
             return;
         }
         e.preventDefault();
+        console.log(action, "|"+nextSymbol+"|");
+        if (nextSymbol !== "▉") {
+            move(action, nextSymbol)
+        }
+    }
 
-        if (key == 39 && x < mapMaxX - 1 && info[y][x+1] != "▉") {
-            // right
-            mapX += 1;
-            x += 1;
-        } else if (key == 37 && x > 0 && info[y][x-1] != "▉") {
-            // left
+    function move(dir, symbol) {
+        if (dir == "left" && x > 0) {
             mapX -= 1;
             x -= 1;
-        } else if (key == 38 && y > 0 && info[y-1][x] != "▉") {
-            // down
+        } else if (dir == "up" && y > 0) {
             mapY -= 1;
             y -= 1;
-        } else if (key == 40 && y < mapMaxY - 1 && info[y+1][x] != "▉") {
-            // up
+        } else if (dir == "right" && x < mapMaxX - 1) {
+            mapX += 1;
+            x += 1;
+        } else if (dir == "down" && y < mapMaxY - 1) {
             mapY += 1;
             y += 1;
         }
 
-        let symbol = info[y][x];
         if ([" ", "▒"].indexOf(symbol) == -1 && room.symbol != symbol) {
             room.symbol = symbol;
             room.txt = " Zone : " + (_this.rooms[symbol] || symbol) + " ";
