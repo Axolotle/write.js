@@ -525,30 +525,34 @@ Animation.prototype.notesReader = function(cursor) {
 Animation.prototype.initMap = function (box) {
     // TODO need to be a separate object prototype with less side effect functions
     const _this = this;
-    var map = _this.txt;
-    const info = _this.collision;
-    const mapMaxX = map[0].length;
-    const mapMaxY = map.length;
+    var map = _this.stages.map(stage => stage.map.split("\n"));
+    const info = _this.stages.map(stage => stage.physic.split("\n"));
+    console.log(info);
+    const rooms = _this.stages.map(stage => stage.rooms);
+    const mapMaxX = map[0][0].length;
+    const mapMaxY = map[0].length;
     const maxX = box.x - box.marginX * 2;
     const maxY = box.y - box.marginY * 2;
-    const middleX = Math.round(box.x / 2) - box.marginX;
-    const middleY = Math.round(box.y / 2) - box.marginY;
+    const middleX = Math.round(box.x / _this.player.posDivX) - box.marginX;
+    const middleY = Math.round(box.y / _this.player.posDivY) - box.marginY;
     const nonWalkable = ["▉"];
 
-    var mapX = 10;
-    var mapY = 100;
+    var mapX = _this.init.x;
+    var mapY = _this.init.y;
     var x = middleX + mapX;
     var y = middleY + mapY;
 
+    let init = _this.init;
+    var stage = _this.init.stage;
     var room = {
-        symbol: "a",
+        symbol: init.symbol,
         line: maxY - 2,
-        txt: " Zone : a ",
+        txt: _this.stages[init.stage].rooms[init.symbol],
         tag: {
             type: "s",
             line: maxY - 2,
             open: 2,
-            close: " Zone : a ".length + 2,
+            close: _this.stages[init.stage].rooms[init.symbol].length + 2,
         },
     };
 
@@ -561,31 +565,25 @@ Animation.prototype.initMap = function (box) {
         // console.log(e.key, e.keyIdentifier, e.keyCode);
 
         if (["ArrowLeft", "Left", 37].indexOf(key) > -1) {
-            action = "left";
-            nextSymbol = info[y][x-1];
+            move("left", info[stage][y][x-1]);
         } else if (["ArrowUp", "Up", 38].indexOf(key) > -1) {
-            action = "up";
-            nextSymbol = info[y-1][x];
+            move("up", info[stage][y-1][x]);
         } else if (["ArrowRight", "Right", 39].indexOf(key) > -1) {
-            action = "right";
-            nextSymbol = info[y][x+1];
+            move("right", info[stage][y][x+1]);
         } else if (["ArrowDown", "Down", 40].indexOf(key) > -1) {
-            action = "down";
-            nextSymbol = info[y+1][x];
+            move("down", info[stage][y+1][x]);
         } else if ([" ", "U+0020", 32].indexOf(key) > -1) {
-            action = "action";
-            return;
+            action()
         } else {
             return;
         }
         e.preventDefault();
-        console.log(action, "|"+nextSymbol+"|");
-        if (nextSymbol !== "▉") {
-            move(action, nextSymbol)
-        }
     }
 
     function move(dir, symbol) {
+        console.log(dir, "|"+symbol+"|");
+        if (nonWalkable.indexOf(symbol) > -1) return;
+
         if (dir == "left" && x > 0) {
             mapX -= 1;
             x -= 1;
@@ -602,12 +600,16 @@ Animation.prototype.initMap = function (box) {
 
         if ([" ", "▒"].indexOf(symbol) == -1 && room.symbol != symbol) {
             room.symbol = symbol;
-            room.txt = " Zone : " + (_this.rooms[symbol] || symbol) + " ";
+            room.txt = " Zone : " + (rooms[stage][symbol] || symbol) + " ";
             room.tag.close = room.txt.length + room.tag.open;
         }
 
         console.log(mapX +'/' +mapMaxX, mapY + '/' + mapMaxY, 'persoX:'+x, 'persoY:'+y,);
         update();
+    }
+
+    function action() {
+
     }
 
     function update() {
@@ -640,13 +642,13 @@ Animation.prototype.initMap = function (box) {
         }
 
         if (mapY < 0) {
-            let portion = adaptX(map.slice(0, mapY + maxY));
+            let portion = adaptX(map[stage].slice(0, mapY + maxY));
             return getExtraLines(mapY * -1).concat(portion);
         } else if (mapY + maxY > mapMaxY) {
-            let portion = adaptX(map.slice(mapY, mapMaxY));
+            let portion = adaptX(map[stage].slice(mapY, mapMaxY));
             return portion.concat(getExtraLines((mapY + maxY) - mapMaxY));
         } else {
-            return adaptX(map.slice(mapY, mapY + maxY));
+            return adaptX(map[stage].slice(mapY, mapY + maxY));
         }
 
     }

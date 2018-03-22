@@ -75,13 +75,7 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         } else if (format == "subtitle") {
             return { txt: _this.subtitle(txt) };
         } else if (format == "img") {
-            newTxt = { txt: txt[0].split("\n") };
-            if (json.hasOwnProperty('collision')) {
-                obj.collision = json.collision.split("\n");
-            }
-            if (json.hasOwnProperty('rooms')) {
-                obj.rooms = json.rooms;
-            }
+            return json;
         }
 
         if (json.hasOwnProperty('wordIsTag')) {
