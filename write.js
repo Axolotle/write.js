@@ -527,7 +527,6 @@ Animation.prototype.initMap = function (box) {
     const _this = this;
     var map = _this.stages.map(stage => stage.map.split("\n"));
     const info = _this.stages.map(stage => stage.physic.split("\n"));
-    console.log(info);
     const rooms = _this.stages.map(stage => stage.rooms);
     const mapMaxX = map[0][0].length;
     const mapMaxY = map[0].length;
@@ -547,15 +546,16 @@ Animation.prototype.initMap = function (box) {
     var room = {
         symbol: init.symbol,
         line: maxY - 2,
-        txt: _this.stages[init.stage].rooms[init.symbol],
+        txt: rooms[stage][init.symbol].name,
         tag: {
             type: "s",
             line: maxY - 2,
             open: 2,
-            close: _this.stages[init.stage].rooms[init.symbol].length + 2,
+            close: rooms[stage][init.symbol].name.length + 2,
         },
     };
 
+    var display;
 
     window.addEventListener("keydown", checkKeys);
 
@@ -563,6 +563,7 @@ Animation.prototype.initMap = function (box) {
         const key = e.key || e.keyIdentifier || e.keyCode;
         var action, nextSymbol;
         // console.log(e.key, e.keyIdentifier, e.keyCode);
+        // TODO check compatibility for Array.prototype.includes()
 
         if (["ArrowLeft", "Left", 37].indexOf(key) > -1) {
             move("left", info[stage][y][x-1]);
@@ -600,26 +601,40 @@ Animation.prototype.initMap = function (box) {
 
         if ([" ", "▒"].indexOf(symbol) == -1 && room.symbol != symbol) {
             room.symbol = symbol;
-            room.txt = " Zone : " + (rooms[stage][symbol] || symbol) + " ";
+            room.txt = " Zone : " + (rooms[stage][symbol].name || symbol) + " ";
             room.tag.close = room.txt.length + room.tag.open;
+            render();
+            var formatter = new FormatJSON();
+            var txt = formatter.splitTxt([rooms[stage][symbol].fixedText], [0,0], {x:25});
+            console.log(txt);
+            blit(5, maxX-30, txt)
+        } else {
+            render();
         }
-
-        console.log(mapX +'/' +mapMaxX, mapY + '/' + mapMaxY, 'persoX:'+x, 'persoY:'+y,);
         update();
+
     }
 
-    function action() {
+    function render() {
+        display = getMapPortion();
+        blit(middleY, middleX, "▉");
+        blit(room.line, 2, room.txt);
+    }
 
+    function blit(startY, startX, content) {
+        if (!Array.isArray(content)) {
+            display[startY] = replaceStrAt(display[startY], startX, content);
+        } else {
+            for (let y = 0, l = content.length; y < l; y++) {
+                display[startY+y] = replaceStrAt(display[startY+y], startX, content[y]);
+            }
+        }
     }
 
     function update() {
-        let portion = getMapPortion();
-        portion[middleY] = replaceStrAt(portion[middleY], middleX, "▉");
-        portion[room.line] = replaceStrAt(portion[room.line], 2, room.txt);
-
         box.removeTags(room.line);
         for (let l = 0; l < maxY; l++) {
-            box.printOnLine(l, 0, portion[l]);
+            box.printOnLine(l, 0, display[l]);
         }
         box.addTags(room.tag);
     }
@@ -653,7 +668,8 @@ Animation.prototype.initMap = function (box) {
 
     }
 
-    update()
+    render();
+    update();
 };
 
 function Viewfinder(divName, size, normal, hover) {
