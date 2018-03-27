@@ -17,6 +17,33 @@ function replaceStrAt(str, index, content) {
     return str.substr(0, index) + content + str.substr(index + content.length);
 }
 
+function boxify(text, maxX, maxY, marginX, marginY, stroke) {
+    var sym = "─│┌┐┘└".split("");
+    var boxified = [];
+
+    var marginLeft = marginRight = marginX > 0 ?  " ".repeat(marginX) : "";
+    if (stroke) {
+        marginLeft = sym[1] + marginLeft;
+        marginRight += sym[1];
+    }
+    for (let i = 0, l = text.length; i < l; i++) {
+        let line = text[i] + " ".repeat(maxX - text[i].length);
+        boxified.push(marginLeft + line + marginRight);
+    }
+    if (marginY > 0) {
+        let extraLine = marginLeft + " ".repeat(maxX) + marginRight;
+        let margins = Array(marginY).fill(extraLine);
+        boxified = margins.concat(boxified, margins);
+    }
+    if (stroke) {
+        let marginTop = sym[2] + sym[0].repeat(marginX * 2 + maxX) + sym[3];
+        let marginBot = sym[5] + sym[0].repeat(marginX * 2 + maxX) + sym[4]
+        boxified.splice(0, 0, marginTop);
+        boxified.push(marginBot)
+    }
+    return boxified;
+}
+
 function FormatJSON(x, y, marginX, marginY) {
     this.x = x;
     this.y = y;

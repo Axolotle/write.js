@@ -604,10 +604,10 @@ Animation.prototype.initMap = function (box) {
             room.txt = " Zone : " + (rooms[stage][symbol].name || symbol) + " ";
             room.tag.close = room.txt.length + room.tag.open;
             render();
-            var formatter = new FormatJSON();
-            var txt = formatter.splitTxt([rooms[stage][symbol].fixedText], [0,0], {x:25});
-            console.log(txt);
-            blit(5, maxX-30, txt)
+            let formatter = new FormatJSON();
+            let txt = formatter.splitTxt([rooms[stage][symbol].fixedText], [0,0], {x:maxX * (1/3) - 6});
+            txt = boxify(txt, maxX * (1/3) - 4, txt.length, 1, 1, false);
+            blit(2, maxX * (2/3), txt);
         } else {
             render();
         }
