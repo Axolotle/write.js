@@ -17,14 +17,14 @@ function replaceStrAt(str, index, content) {
     return str.substr(0, index) + content + str.substr(index + content.length);
 }
 
-function boxify(text, maxX, maxY, marginX, marginY, stroke) {
-    var sym = "─│┌┐┘└".split("");
+function boxify(text, maxX, maxY, marginX, marginY, stroke, symbols) {
+    var sym = symbols ? symbols.split("") : "┌─┐││└─┘".split("");
     var boxified = [];
 
     var marginLeft = marginRight = marginX > 0 ?  " ".repeat(marginX) : "";
     if (stroke) {
-        marginLeft = sym[1] + marginLeft;
-        marginRight += sym[1];
+        marginLeft = sym[3] + marginLeft;
+        marginRight += sym[4];
     }
     for (let i = 0, l = text.length; i < l; i++) {
         let line = text[i] + " ".repeat(maxX - text[i].length);
@@ -36,12 +36,30 @@ function boxify(text, maxX, maxY, marginX, marginY, stroke) {
         boxified = margins.concat(boxified, margins);
     }
     if (stroke) {
-        let marginTop = sym[2] + sym[0].repeat(marginX * 2 + maxX) + sym[3];
-        let marginBot = sym[5] + sym[0].repeat(marginX * 2 + maxX) + sym[4]
+        let marginTop = sym[0] + sym[1].repeat(marginX * 2 + maxX) + sym[2];
+        let marginBot = sym[5] + sym[6].repeat(marginX * 2 + maxX) + sym[7];
         boxified.splice(0, 0, marginTop);
         boxified.push(marginBot)
     }
     return boxified;
+}
+
+function pick(array) {
+    return array[Math.floor(Math.random() * array.length)]
+}
+
+function shuffle(array) {
+    let remaining = array.length;
+    // While there are elements in the array
+    while (remaining > 0) {
+        // Pick a random index
+        let index = Math.floor(Math.random() * remaining--);
+        // And swap the last element with it
+        let temp = array[remaining];
+        array[remaining] = array[index];
+        array[index] = temp;
+    }
+    return array;
 }
 
 function FormatJSON(x, y, marginX, marginY) {
