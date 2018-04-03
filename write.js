@@ -545,26 +545,51 @@ Animation.prototype.initMap = function (box) {
     var roomDisplay = {
         symbol: init.symbol,
         line: maxY - 2,
-        txt: rooms[stage][init.symbol].name,
+        txt: init.roomName,
         tag: {
             type: "s",
             line: maxY - 2,
             open: 2,
-            close: rooms[stage][init.symbol].name.length + 2,
+            close: init.roomName.length + 2,
         },
     };
 
     var startTime = Date.now();
-    var display;
-    var actions;
-    var required = ["etudiante_rencontre"];
+    var gameover = false;
+    var display, actions, blocked;
+    var required = new Set(["etudiante_rencontre"]);
 
     window.addEventListener("keydown", checkKeys);
 
     function checkKeys(e) {
         const key = e.key || e.keyIdentifier || e.keyCode;
         // TODO check compatibility for Array.prototype.includes()
-        if (actions) {
+        if (gameover) {
+            if ([" ", "U+0020", 32].indexOf(key) > -1) {
+                gameover = false;
+            } else {
+                return;
+            }
+        }
+        if (blocked && actions) {
+            if (key == "w" && actions[0]) {
+                action(0);
+            } else if (key == "x" && actions[1]) {
+                action(1);
+            } else if (key == "c" && actions[2]) {
+                action(2);
+            } else {
+                return;
+            }
+        } else if (blocked) {
+            if ([" ", "U+0020", 32].indexOf(key) > -1) {
+                blocked = false;
+                render();
+                update();
+            } else {
+                return;
+            }
+        } else if (actions) {
             if (key == "w" && actions[0]) {
                 action(0);
             } else if (key == "x" && actions[1]) {
@@ -621,35 +646,39 @@ Animation.prototype.initMap = function (box) {
             let room = rooms[stage][symbol];
 
             roomDisplay.symbol = symbol;
-            roomDisplay.txt = " Zone : " + (room.name || symbol) + " ";
+            roomDisplay.txt = (stage == 0 ? " Rdc - " : " 1er : ") + (room.name || symbol) + " ";
             roomDisplay.tag.close = roomDisplay.txt.length + roomDisplay.tag.open;
             render();
 
             let txt = [];
             if (room.hasOwnProperty("clock")) {
                 txt.push("Sur l'horloge au mur il est " + formatTime(Date.now() - startTime));
-                txt.push("")
+                txt.push("");
             }
             if (room.hasOwnProperty("fixedText")) {
-                txt.push(room.fixedText)
+                txt.push(room.fixedText);
             }
             if (room.hasOwnProperty("randomText")) {
-                txt.push(pick(room.randomText))
+                txt.push(pick(room.randomText));
             }
             if (room.hasOwnProperty("actions")) {
                 if (!Array.isArray(room.actions)) {
-                    let req = haveRequired(Object.keys(room.actions)) || "default";
+                    let req = hasRequired(Object.keys(room.actions)) || "default";
                     actions = room.actions[req];
                 } else {
                     actions = room.actions;
                 }
                 txt.push("");
-                let opt = ["w", "x", "c"]
+                let opt = ["w", "x", "c"];
                 for (let i = 0, len = actions.length ; i < len; i++) {
-                    txt.push("[" + opt[i] + "] " + actions[i].text)
+                    txt.push("[" + opt[i] + "] " + actions[i].text);
                 }
+            } else {
+                txt.push("\nESPACE POUR CONTINUER");
             }
-            renderText(txt);
+            if (txt.length > 1) {
+                renderText(txt);
+            }
         } else {
             render();
         }
@@ -658,18 +687,50 @@ Animation.prototype.initMap = function (box) {
     }
 
     function action(n) {
-        if (actions[n].success.hasOwnProperty("text")) {
-            render();
-            renderText([actions[n].success.text]);
-            update();
+        let action = actions[n];
+        let success = true;
+        let text = [];
+        if (action.hasOwnProperty("required")) {
+            if (!required.has(action.required)) {
+                success = false;
+                text.push(action.failure.text);
+                if (action.failure.effect == "game_over") {
+                    gameover = true;
+                    text.push("\n\nGAME OVER");
+                }
+            }
         }
+        if (success && action.hasOwnProperty("success")) {
+            if (action.success.hasOwnProperty("text")) {
+                text.push(action.success.text);
+            }
+            if (action.success.hasOwnProperty("effect") && action.success.effect !== null) {
+                let effect = action.success.effect;
+                if (effect.indexOf("teleport") > -1) {
+                    // move to coordinates
+                } else if (effect.indexOf("open") > -1) {
+                    // open door
+                } else if (effect == "you_win") {
+                    // WIN
+                } else if (effect == "game_over") {
+                    gameover = true;
+                    text.push("\n\nGAME OVER");
+                } else {
+                    required.add(effect);
+                }
+            }
+        }
+        text.push("\nESPACE POUR CONTINUER");
+        render();
+        renderText(text);
+        update();
         actions = null;
     }
 
-    function haveRequired(elems) {
+    function hasRequired(elems) {
         for (let i = 0, len = elems.length; i < len; i++) {
-            if (required.includes(elems[i])) {
-                return elems[i]
+            if (required.has(elems[i])) {
+                return elems[i];
             }
         }
         return null;
@@ -677,10 +738,11 @@ Animation.prototype.initMap = function (box) {
 
     function renderText(txt) {
         let formatter = new FormatJSON();
-        let width = box.x * (1/3) - 6;
+        let width = box.x * (1/2) - 6;
         txt = formatter.splitTxt(txt, [0,0], {x: width});
         txt = boxify(txt, width, txt.length, 2, 1, true);
-        blit(txt, 0, box.x * (1/3));
+        blit(txt, 0, box.x * (1/4));
+        blocked = true;
     }
 
     function render() {
@@ -745,9 +807,7 @@ Animation.prototype.initMap = function (box) {
             h++;
         }
         if (h === 24) h = 0;
-        h = h < 10 ? "0" + h : h;
-        m = m < 10 ? "h0" + m : "h" + m;
-        return h + m;
+        return (h < 10 ? "0" + h : h) + (m < 10 ? "h0" + m : "h" + m);
     }
 
     render();
