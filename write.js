@@ -523,11 +523,10 @@ Animation.prototype.notesReader = function(cursor) {
     });
 };
 Animation.prototype.initMap = function (box) {
-    // TODO need to be a separate object prototype with less side effect functions
     const _this = this;
-    var map = _this.stages.map(stage => stage.map.split("\n"));
-    const info = _this.stages.map(stage => stage.physic.split("\n"));
-    const rooms = _this.stages.map(stage => stage.rooms);
+    var map = this.stages.map(stage => stage.map.split("\n"));
+    var info = this.stages.map(stage => stage.physic.split("\n"));
+    var rooms = this.stages.map(stage => stage.rooms);
     const mapMaxX = map[0][0].length;
     const mapMaxY = map[0].length;
     const maxX = box.x - box.marginX * 2;
@@ -543,7 +542,7 @@ Animation.prototype.initMap = function (box) {
 
     let init = _this.init;
     var stage = _this.init.stage;
-    var room = {
+    var roomDisplay = {
         symbol: init.symbol,
         line: maxY - 2,
         txt: rooms[stage][init.symbol].name,
@@ -556,28 +555,39 @@ Animation.prototype.initMap = function (box) {
     };
 
     var display;
+    var actions;
 
     window.addEventListener("keydown", checkKeys);
 
     function checkKeys(e) {
         const key = e.key || e.keyIdentifier || e.keyCode;
-        var action, nextSymbol;
-        // console.log(e.key, e.keyIdentifier, e.keyCode);
         // TODO check compatibility for Array.prototype.includes()
-
-        if (["ArrowLeft", "Left", 37].indexOf(key) > -1) {
-            move("left", info[stage][y][x-1]);
-        } else if (["ArrowUp", "Up", 38].indexOf(key) > -1) {
-            move("up", info[stage][y-1][x]);
-        } else if (["ArrowRight", "Right", 39].indexOf(key) > -1) {
-            move("right", info[stage][y][x+1]);
-        } else if (["ArrowDown", "Down", 40].indexOf(key) > -1) {
-            move("down", info[stage][y+1][x]);
-        } else if ([" ", "U+0020", 32].indexOf(key) > -1) {
-            action()
+        if (actions) {
+            if (key == "w" && actions[0]) {
+                action(0);
+            } else if (key == "x" && actions[1]) {
+                action(1);
+            } else if (key == "c" && actions[2]) {
+                action(2);
+            } else {
+                return;
+            }
         } else {
-            return;
+            if (["ArrowLeft", "Left", 37].indexOf(key) > -1) {
+                move("left", info[stage][y][x-1]);
+            } else if (["ArrowUp", "Up", 38].indexOf(key) > -1) {
+                move("up", info[stage][y-1][x]);
+            } else if (["ArrowRight", "Right", 39].indexOf(key) > -1) {
+                move("right", info[stage][y][x+1]);
+            } else if (["ArrowDown", "Down", 40].indexOf(key) > -1) {
+                move("down", info[stage][y+1][x]);
+            } else if ([" ", "U+0020", 32].indexOf(key) > -1) {
+                return;// action();
+            } else {
+                return;
+            }
         }
+
         e.preventDefault();
     }
 
@@ -599,15 +609,37 @@ Animation.prototype.initMap = function (box) {
             y += 1;
         }
 
-        if ([" ", "▒"].indexOf(symbol) == -1 && room.symbol != symbol) {
-            room.symbol = symbol;
-            room.txt = " Zone : " + (rooms[stage][symbol].name || symbol) + " ";
-            room.tag.close = room.txt.length + room.tag.open;
+        if (symbol === "0") {
+            stage = 1;
             render();
-            let formatter = new FormatJSON();
-            let txt = formatter.splitTxt([rooms[stage][symbol].fixedText], [0,0], {x:maxX * (1/3) - 6});
-            txt = boxify(txt, maxX * (1/3) - 4, txt.length, 1, 1, false);
-            blit(2, maxX * (2/3), txt);
+        } else if (symbol === "1") {
+            stage = 0;
+            render();
+        } else if ([" ", "▒"].indexOf(symbol) == -1 && roomDisplay.symbol != symbol) {
+            let room = rooms[stage][symbol];
+
+            roomDisplay.symbol = symbol;
+            roomDisplay.txt = " Zone : " + (room.name || symbol) + " ";
+            roomDisplay.tag.close = roomDisplay.txt.length + roomDisplay.tag.open;
+            render();
+
+            let txt = [];
+            // if (room.hasOwnProperty("clock"))
+            if (room.hasOwnProperty("fixedText")) {
+                txt.push(room.fixedText)
+            }
+            if (room.hasOwnProperty("randomText")) {
+                txt.push(pick(room.randomText))
+            }
+            if (room.hasOwnProperty("actions")) {
+                actions = room.actions;
+                txt.push("");
+                let opt = ["w", "x", "c"]
+                for (let i = 0, len = room.actions.length ; i < len; i++) {
+                    txt.push("[" + opt[i] + "] " + room.actions[i].text)
+                }
+            }
+            renderText(txt);
         } else {
             render();
         }
@@ -615,13 +647,30 @@ Animation.prototype.initMap = function (box) {
 
     }
 
-    function render() {
-        display = getMapPortion();
-        blit(middleY, middleX, "▉");
-        blit(room.line, 2, room.txt);
+    function action(n) {
+        if (actions[n].success.hasOwnProperty("text")) {
+            render();
+            renderText([actions[n].success.text]);
+            update();
+        }
+        actions = null;
     }
 
-    function blit(startY, startX, content) {
+    function renderText(txt) {
+        let formatter = new FormatJSON();
+        let width = box.x * (1/3) - 6;
+        txt = formatter.splitTxt(txt, [0,0], {x: width});
+        txt = boxify(txt, width, txt.length, 2, 1, true);
+        blit(txt, 0, box.x * (1/3));
+    }
+
+    function render() {
+        display = getMapPortion();
+        blit("▉", middleY, middleX);
+        blit(roomDisplay.txt, roomDisplay.line, 2);
+    }
+
+    function blit(content, startY, startX) {
         if (!Array.isArray(content)) {
             display[startY] = replaceStrAt(display[startY], startX, content);
         } else {
@@ -632,11 +681,11 @@ Animation.prototype.initMap = function (box) {
     }
 
     function update() {
-        box.removeTags(room.line);
+        box.removeTags(roomDisplay.line);
         for (let l = 0; l < maxY; l++) {
             box.printOnLine(l, 0, display[l]);
         }
-        box.addTags(room.tag);
+        box.addTags(roomDisplay.tag);
     }
 
     function getMapPortion() {
