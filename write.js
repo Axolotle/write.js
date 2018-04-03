@@ -554,6 +554,7 @@ Animation.prototype.initMap = function (box) {
         },
     };
 
+    var startTime = Date.now();
     var display;
     var actions;
 
@@ -624,7 +625,10 @@ Animation.prototype.initMap = function (box) {
             render();
 
             let txt = [];
-            // if (room.hasOwnProperty("clock"))
+            if (room.hasOwnProperty("clock")) {
+                txt.push("Sur l'horloge au mur il est " + formatTime(Date.now() - startTime));
+                txt.push("")
+            }
             if (room.hasOwnProperty("fixedText")) {
                 txt.push(room.fixedText)
             }
@@ -715,6 +719,20 @@ Animation.prototype.initMap = function (box) {
             return adaptX(map[stage].slice(mapY, mapY + maxY));
         }
 
+    }
+
+    function formatTime(ms) {
+        let s = Math.floor(ms / 1000) + init.time;
+        let h = Math.floor(s / 3600);
+        let m = Math.floor((s % 3600) / 60);
+        if (m === 60) {
+            m = 0;
+            h++;
+        }
+        if (h === 24) h = 0;
+        h = h < 10 ? "0" + h : h;
+        m = m < 10 ? "h0" + m : "h" + m;
+        return h + m;
     }
 
     render();
