@@ -557,6 +557,7 @@ Animation.prototype.initMap = function (box) {
     var startTime = Date.now();
     var display;
     var actions;
+    var required = ["etudiante_rencontre"];
 
     window.addEventListener("keydown", checkKeys);
 
@@ -636,11 +637,16 @@ Animation.prototype.initMap = function (box) {
                 txt.push(pick(room.randomText))
             }
             if (room.hasOwnProperty("actions")) {
-                actions = room.actions;
+                if (!Array.isArray(room.actions)) {
+                    let req = haveRequired(Object.keys(room.actions)) || "default";
+                    actions = room.actions[req];
+                } else {
+                    actions = room.actions;
+                }
                 txt.push("");
                 let opt = ["w", "x", "c"]
-                for (let i = 0, len = room.actions.length ; i < len; i++) {
-                    txt.push("[" + opt[i] + "] " + room.actions[i].text)
+                for (let i = 0, len = actions.length ; i < len; i++) {
+                    txt.push("[" + opt[i] + "] " + actions[i].text)
                 }
             }
             renderText(txt);
@@ -658,6 +664,15 @@ Animation.prototype.initMap = function (box) {
             update();
         }
         actions = null;
+    }
+
+    function haveRequired(elems) {
+        for (let i = 0, len = elems.length; i < len; i++) {
+            if (required.includes(elems[i])) {
+                return elems[i]
+            }
+        }
+        return null;
     }
 
     function renderText(txt) {
