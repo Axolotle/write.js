@@ -572,11 +572,11 @@ Animation.prototype.initMap = function (box) {
             }
         }
         if (blocked && actions) {
-            if (key == "w" && actions[0]) {
+            if (key == "x" && actions[0]) {
                 action(0);
-            } else if (key == "x" && actions[1]) {
+            } else if (key == "c" && actions[1]) {
                 action(1);
-            } else if (key == "c" && actions[2]) {
+            } else if (key == "v" && actions[2]) {
                 action(2);
             } else {
                 return;
@@ -586,16 +586,6 @@ Animation.prototype.initMap = function (box) {
                 blocked = false;
                 render();
                 update();
-            } else {
-                return;
-            }
-        } else if (actions) {
-            if (key == "w" && actions[0]) {
-                action(0);
-            } else if (key == "x" && actions[1]) {
-                action(1);
-            } else if (key == "c" && actions[2]) {
-                action(2);
             } else {
                 return;
             }
@@ -644,13 +634,18 @@ Animation.prototype.initMap = function (box) {
             render();
         } else if ([" ", "▒"].indexOf(symbol) == -1 && roomDisplay.symbol != symbol) {
             let room = rooms[stage][symbol];
-
+            // Start vomiting
             roomDisplay.symbol = symbol;
             roomDisplay.txt = (stage == 0 ? " Rdc - " : " 1er : ") + (room.name || symbol) + " ";
             roomDisplay.tag.close = roomDisplay.txt.length + roomDisplay.tag.open;
             render();
 
             let txt = [];
+            if (room.hasOwnProperty("removeRandom") && room.randomText.length == 0) {
+                update();
+                return;
+            }
+
             if (room.hasOwnProperty("clock")) {
                 txt.push("Sur l'horloge au mur il est " + formatTime(Date.now() - startTime) + "\n");
             }
@@ -658,7 +653,11 @@ Animation.prototype.initMap = function (box) {
                 txt.push(room.fixedText);
             }
             if (room.hasOwnProperty("randomText")) {
-                txt.push(pick(room.randomText));
+                if (room.hasOwnProperty("removeRandom")) {
+                    txt.push(rooms[stage][symbol].randomText.pop());
+                } else {
+                    txt.push(pick(room.randomText));
+                }
             }
             if (room.hasOwnProperty("effect")) {
                 if (room.effect == "game_over") {
@@ -674,7 +673,7 @@ Animation.prototype.initMap = function (box) {
                     actions = room.actions;
                 }
                 txt.push("");
-                let opt = ["w", "x", "c"];
+                let opt = ["x", "c", "v"];
                 for (let i = 0, len = actions.length ; i < len; i++) {
                     txt.push("[" + opt[i] + "] " + actions[i].text);
                 }
@@ -735,6 +734,18 @@ Animation.prototype.initMap = function (box) {
                 } else {
                     required.add(effect);
                 }
+            }
+            if (action.success.hasOwnProperty("remove")) {
+                if (action.success.remove === true) {
+                    delete rooms[stage][roomDisplay.symbol].actions;
+                } else {
+                    for (const prop of Object.keys(rooms[stage][roomDisplay.symbol])) {
+                        if (prop != "name") {
+                            delete rooms[stage][roomDisplay.symbol][prop];
+                        }
+                    }
+                }
+
             }
         }
         text.push("\nESPACE POUR CONTINUER");
