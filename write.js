@@ -652,8 +652,7 @@ Animation.prototype.initMap = function (box) {
 
             let txt = [];
             if (room.hasOwnProperty("clock")) {
-                txt.push("Sur l'horloge au mur il est " + formatTime(Date.now() - startTime));
-                txt.push("");
+                txt.push("Sur l'horloge au mur il est " + formatTime(Date.now() - startTime) + "\n");
             }
             if (room.hasOwnProperty("fixedText")) {
                 txt.push(room.fixedText);
@@ -661,9 +660,15 @@ Animation.prototype.initMap = function (box) {
             if (room.hasOwnProperty("randomText")) {
                 txt.push(pick(room.randomText));
             }
+            if (room.hasOwnProperty("effect")) {
+                if (room.effect == "game_over") {
+                    gameover = true;
+                    text.push("\n\nGAME OVER");
+                }
+            }
             if (room.hasOwnProperty("actions")) {
                 if (!Array.isArray(room.actions)) {
-                    let req = hasRequired(Object.keys(room.actions)) || "default";
+                    let req = getRequired(Object.keys(room.actions)) || "default";
                     actions = room.actions[req];
                 } else {
                     actions = room.actions;
@@ -691,16 +696,28 @@ Animation.prototype.initMap = function (box) {
         let success = true;
         let text = [];
         if (action.hasOwnProperty("required")) {
-            if (!required.has(action.required)) {
+            let failure;
+            if (Array.isArray(action.required)) {
+                for (const req of action.required) {
+                    if (!required.has(req)) {
+                        failure = action.failure;
+                        failure.text = failure.text[req];
+                        break;
+                    }
+                }
+            } else if (!required.has(action.required)) {
+                failure = action.failure;
+            }
+            if (failure !== undefined) {
                 success = false;
-                text.push(action.failure.text);
-                if (action.failure.effect == "game_over") {
+                text.push(failure.text);
+                if (failure.effect == "game_over") {
                     gameover = true;
                     text.push("\n\nGAME OVER");
                 }
             }
         }
-        if (success && action.hasOwnProperty("success")) {
+        if (success && action.hasOwnProperty("success") && action.success !== null) {
             if (action.success.hasOwnProperty("text")) {
                 text.push(action.success.text);
             }
@@ -727,10 +744,11 @@ Animation.prototype.initMap = function (box) {
         actions = null;
     }
 
-    function hasRequired(elems) {
-        for (let i = 0, len = elems.length; i < len; i++) {
-            if (required.has(elems[i])) {
-                return elems[i];
+    function getRequired(elems) {
+        // Return a required name or null if none have been found
+        for (const elem of elems) {
+            if (required.has(elem)) {
+                return elem;
             }
         }
         return null;
