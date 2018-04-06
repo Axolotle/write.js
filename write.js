@@ -685,8 +685,19 @@ Animation.prototype.initMap = function (box) {
                 if (room.effect == "game_over") {
                     gameover = true;
                     text.push("\n\nGAME OVER");
+                } else if (Number.isIntegrer(room.effect)) {
+                    startTime += room.effect;
                 } else {
                     required.add(room.effect);
+                }
+            }
+            if (room.hasOwnProperty("remove")) {
+                if (room.remove === "all") {
+                    for (const prop of Object.keys(rooms[stage][roomDisplay.symbol])) {
+                        if (prop != "name") {
+                            delete rooms[stage][roomDisplay.symbol][prop];
+                        }
+                    }
                 }
             }
             if (room.hasOwnProperty("actions")) {
@@ -696,20 +707,12 @@ Animation.prototype.initMap = function (box) {
                 } else {
                     actions = room.actions;
                 }
-                console.log(actions);
                 if (actions) {
-                    if (txt.length != 0) {
-                        txt.push("");
-                    }
+                    txt.push("");
                     let opt = ["x", "c", "v"];
-                    console.log(actions.length);
                     for (let i = 0, len = actions.length ; i < len; i++) {
                         txt.push("[" + opt[i] + "] " + actions[i].text);
                     }
-                    if (txt.length == 1) {
-                        txt.push("");
-                    }
-                    console.log(txt, txt.length);
                 }
             } else {
                 txt.push("\n\n{{tag::s}} continuer {{tag::/s}}");
@@ -736,6 +739,7 @@ Animation.prototype.initMap = function (box) {
                     if (!required.has(req)) {
                         failure = action.failure;
                         failure.text = failure.text[req];
+                        failure.effect = failure.effect[req];
                         break;
                     }
                 }
@@ -783,7 +787,6 @@ Animation.prototype.initMap = function (box) {
                         }
                     }
                 }
-
             }
         }
         if (teleCoord) {
