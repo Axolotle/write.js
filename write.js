@@ -685,6 +685,8 @@ Animation.prototype.initMap = function (box) {
                 if (room.effect == "game_over") {
                     gameover = true;
                     text.push("\n\nGAME OVER");
+                } else {
+                    required.add(room.effect);
                 }
             }
             if (room.hasOwnProperty("actions")) {
@@ -694,10 +696,20 @@ Animation.prototype.initMap = function (box) {
                 } else {
                     actions = room.actions;
                 }
-                txt.push("");
-                let opt = ["x", "c", "v"];
-                for (let i = 0, len = actions.length ; i < len; i++) {
-                    txt.push("[" + opt[i] + "] " + actions[i].text);
+                console.log(actions);
+                if (actions) {
+                    if (txt.length != 0) {
+                        txt.push("");
+                    }
+                    let opt = ["x", "c", "v"];
+                    console.log(actions.length);
+                    for (let i = 0, len = actions.length ; i < len; i++) {
+                        txt.push("[" + opt[i] + "] " + actions[i].text);
+                    }
+                    if (txt.length == 1) {
+                        txt.push("");
+                    }
+                    console.log(txt, txt.length);
                 }
             } else {
                 txt.push("\n\n{{tag::s}} continuer {{tag::/s}}");
@@ -716,6 +728,7 @@ Animation.prototype.initMap = function (box) {
         let action = actions[n];
         let success = true;
         let text = [];
+        let teleCoord;
         if (action.hasOwnProperty("required")) {
             let failure;
             if (Array.isArray(action.required)) {
@@ -748,7 +761,7 @@ Animation.prototype.initMap = function (box) {
             if (action.success.hasOwnProperty("effect") && action.success.effect !== null) {
                 let effect = action.success.effect;
                 if (Array.isArray(effect)) {
-                    teleport(effect);
+                    teleCoord = effect;
                 } else if (effect.indexOf("open") > -1) {
                     // open door
                 } else if (effect == "you_win") {
@@ -772,6 +785,9 @@ Animation.prototype.initMap = function (box) {
                 }
 
             }
+        }
+        if (teleCoord) {
+            teleport(teleCoord);
         }
         text.push("\n\n{{tag::s}} continuer {{tag::/s}}");
         render();
