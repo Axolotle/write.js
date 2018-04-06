@@ -523,6 +523,7 @@ Animation.prototype.notesReader = function(cursor) {
     });
 };
 Animation.prototype.initMap = function (box) {
+    return new Promise((resolve, reject) => {
     const _this = this;
     var map = this.stages.map(stage => stage.map.split("\n"));
     var info = this.stages.map(stage => stage.physic.split("\n"));
@@ -572,8 +573,35 @@ Animation.prototype.initMap = function (box) {
         // TODO check compatibility for Array.prototype.includes()
         if (gameover) {
             if ([" ", "U+0020", 32].indexOf(key) > -1) {
-                gameover = false;
-                // window.removeEventListener("keydown", checkKeys);
+                box.cleanLines();
+                if (map === null) {
+                    window.removeEventListener("keydown", checkKeys);
+                    resolve();
+                    return;
+                } else {
+                    map = info = rooms = null;
+                    let txt = [
+                        "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
+                        "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
+                        "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
+                        "                           ",
+                        "           retry           ",
+                    ];
+                    x = Math.floor((box.x / 2) - (txt[0].length / 2));
+                    y = Math.floor((box.y / 2) - 3);
+                    for (const line of txt) {
+                        box.printOnLine(y++ - 2, x - 2, line);
+                    }
+                    box.addTags({
+                        type: "s",
+                        line: y - 3,
+                        open: x + 8,
+                        close: x + 15,
+                    })
+
+                    return;
+                }
+                // gameover = false;
             } else {
                 return;
             }
@@ -684,7 +712,6 @@ Animation.prototype.initMap = function (box) {
             if (room.hasOwnProperty("effect")) {
                 if (room.effect == "game_over") {
                     gameover = true;
-                    text.push("\n\nGAME OVER");
                 } else if (Number.isIntegrer(room.effect)) {
                     startTime += room.effect;
                 } else {
@@ -751,7 +778,6 @@ Animation.prototype.initMap = function (box) {
                 text.push(failure.text);
                 if (failure.effect == "game_over") {
                     gameover = true;
-                    text.push("\n\nGAME OVER");
                 }
                 if (Array.isArray(failure.effect)) {
                     teleport(failure.effect);
@@ -772,7 +798,6 @@ Animation.prototype.initMap = function (box) {
                     // WIN
                 } else if (effect == "game_over") {
                     gameover = true;
-                    text.push("\n\nGAME OVER");
                 } else {
                     required.add(effect);
                 }
@@ -834,6 +859,7 @@ Animation.prototype.initMap = function (box) {
         }
         return null;
     }
+
     function teleport(coord) {
         mapX += coord[0];
         x += coord[0];
@@ -881,7 +907,7 @@ Animation.prototype.initMap = function (box) {
                 let tag = {
                     type: content,
                     line: sLine + mY,
-                    open: options[i].index + mX ,
+                    open: options[i].index + mX,
                 };
                 if (eLine !== sLine) {
                     tag.close = txt.txt[sLine].length + mX + extra;
@@ -901,7 +927,7 @@ Animation.prototype.initMap = function (box) {
                     tag.close = txt.txt[eLine].length + mX;
                     tags.push(tag);
                 } else {
-                    tag.close = options[i+1].index + mX - extra - options[i].content.length ;
+                    tag.close = options[i+1].index + mX - extra - options[i].content.length;
                     tags.push(tag);
                 }
             }
@@ -976,7 +1002,7 @@ Animation.prototype.initMap = function (box) {
         if (h === 24) h = 0;
         return h + (m < 10 ? "h0" + m : "h" + m);
     }
-
+});
 };
 
 function Viewfinder(divName, size, normal, hover) {
