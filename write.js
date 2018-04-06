@@ -535,13 +535,11 @@ Animation.prototype.initMap = function (box) {
     const middleY = Math.round(box.y / _this.player.posDivY) - box.marginY;
     const nonWalkable = ["▉"];
 
-    var mapX = _this.init.x;
-    var mapY = _this.init.y;
-    var x = middleX + mapX;
-    var y = middleY + mapY;
-
-    let init = _this.init;
-    var stage = _this.init.stage;
+    var init = _this.init;
+    var mapX = init.x - middleX;
+    var mapY = init.y - middleY;
+    var x = init.x;
+    var y = init.y;
     var roomDisplay = {
         symbol: init.symbol,
         line: maxY - 2,
@@ -553,13 +551,19 @@ Animation.prototype.initMap = function (box) {
             close: init.roomName.length + 2,
         },
     };
-
+    var stage = init.stage;
     var startTime = Date.now();
     var gameover = false;
-    var display, actions, blocked;
-    var required = new Set(["etudiante_rencontre"]);
+    var actions = undefined;
+    var blocked = false;
+    var required = new Set();
+    var tags = [];
+
+    render();
+    update();
 
     window.addEventListener("keydown", checkKeys);
+
 
     function checkKeys(e) {
         const key = e.key || e.keyIdentifier || e.keyCode;
@@ -567,6 +571,7 @@ Animation.prototype.initMap = function (box) {
         if (gameover) {
             if ([" ", "U+0020", 32].indexOf(key) > -1) {
                 gameover = false;
+                // window.removeEventListener("keydown", checkKeys);
             } else {
                 return;
             }
@@ -678,7 +683,7 @@ Animation.prototype.initMap = function (box) {
                     txt.push("[" + opt[i] + "] " + actions[i].text);
                 }
             } else {
-                txt.push("\nESPACE POUR CONTINUER");
+                txt.push("\n\n{{tag::s}} continuer {{tag::/s}}");
             }
             if (txt.length > 1) {
                 renderText(txt);
@@ -714,6 +719,9 @@ Animation.prototype.initMap = function (box) {
                     gameover = true;
                     text.push("\n\nGAME OVER");
                 }
+                if (Array.isArray(failure.effect)) {
+                    teleport(failure.effect);
+                }
             }
         }
         if (success && action.hasOwnProperty("success") && action.success !== null) {
@@ -722,8 +730,8 @@ Animation.prototype.initMap = function (box) {
             }
             if (action.success.hasOwnProperty("effect") && action.success.effect !== null) {
                 let effect = action.success.effect;
-                if (effect.indexOf("teleport") > -1) {
-                    // move to coordinates
+                if (Array.isArray(effect)) {
+                    teleport(effect);
                 } else if (effect.indexOf("open") > -1) {
                     // open door
                 } else if (effect == "you_win") {
@@ -748,11 +756,15 @@ Animation.prototype.initMap = function (box) {
 
             }
         }
-        text.push("\nESPACE POUR CONTINUER");
+        text.push("\n\n{{tag::s}} continuer {{tag::/s}}");
         render();
-        renderText(text);
+        if (text.length > 1) {
+            renderText(text);
+        } else {
+            blocked = false;
+        }
         update();
-        actions = null;
+        actions = undefined;
     }
 
     function getRequired(elems) {
@@ -764,14 +776,80 @@ Animation.prototype.initMap = function (box) {
         }
         return null;
     }
+    function teleport(coord) {
+        mapX += coord[0];
+        x += coord[0];
+        mapY += coord[1];
+        y += coord[1];
+        let symbol = coord[2] || info[stage][y][x];
+        roomDisplay.symbol = symbol;
+        roomDisplay.txt = (stage == 0 ? " Rdc - " : " 1er : ") + rooms[stage][symbol].name + " ";
+        roomDisplay.tag.close = roomDisplay.txt.length + roomDisplay.tag.open;
+    }
 
     function renderText(txt) {
         let formatter = new FormatJSON();
-        let width = box.x * (1/2) - 6;
+        let width = box.x * (3/5) - 6;
+        let mY = 2;
+        let mX = 3;
         txt = formatter.splitTxt(txt, [0,0], {x: width});
-        txt = boxify(txt, width, txt.length, 2, 1, true);
-        blit(txt, 0, box.x * (1/4));
+        txt = formatter.cleanOptions(txt);
+
+        let actualTxt = boxify(txt.txt, width, txt.txt.length, mX-1, mY-1, true);
+        blit(actualTxt, 1, box.x * (1/5));
+        mY += 1;
+        mX += Math.floor(box.x * (1/5));
         blocked = true;
+
+        // FIXME tag stuff bordel
+        if (txt.options.length > 0) {
+            let options = formatter.manageOptions(txt.options).tags;
+            for (let i = 0; i < options.length; i += 2) {
+                let content = options[i].content.substring(1, options[i].content.length - 1);
+                let sLine = options[i].line;
+                let eLine = options[i+1].line;
+                let extra = 0;
+                if (i !== 0) {
+                    extra = options.reduce((length, tag, index) => {
+                        // console.log("tag:", tag.line, tag.content, index);
+                        if (tag.line === sLine && index < i) {
+                            // console.log("yep", length);
+                            return length + tag.content.length;
+                        } else {
+                            return length;
+                        }
+                    }, 0);
+                }
+
+                let tag = {
+                    type: content,
+                    line: sLine + mY,
+                    open: options[i].index + mX ,
+                };
+                if (eLine !== sLine) {
+                    tag.close = txt.txt[sLine].length + mX + extra;
+                    tags.push(tag);
+                    if (eLine - sLine > 1) {
+                        for (let l = sLine + 1; l < eLine; l++) {
+                            // console.log(txt.txt[l]);
+                            tag = {type: content};
+                            tag.line = l + mY;
+                            tag.open = 0 + mX;
+                            tag.close = txt.txt[l].length + mX;
+                            tags.push(tag);
+                        }
+                    }
+                    tag = {type: content};
+                    tag.open = 0 + mX;
+                    tag.line = eLine + mY;
+                    tag.close = txt.txt[eLine].length + mX;
+                    tags.push(tag);
+                } else {
+                    tag.close = options[i+1].index + mX - extra - options[i].content.length ;
+                    tags.push(tag);
+                }
+            }
+        }
     }
 
     function render() {
@@ -791,11 +869,15 @@ Animation.prototype.initMap = function (box) {
     }
 
     function update() {
-        box.removeTags(roomDisplay.line);
+        box.removeTags();
         for (let l = 0; l < maxY; l++) {
             box.printOnLine(l, 0, display[l]);
         }
-        box.addTags(roomDisplay.tag);
+        tags.push(roomDisplay.tag);
+        for (const tag of tags) {
+            box.addTags(tag);
+        }
+        tags = [];
     }
 
     function getMapPortion() {
@@ -836,11 +918,9 @@ Animation.prototype.initMap = function (box) {
             h++;
         }
         if (h === 24) h = 0;
-        return (h < 10 ? "0" + h : h) + (m < 10 ? "h0" + m : "h" + m);
+        return h + (m < 10 ? "h0" + m : "h" + m);
     }
 
-    render();
-    update();
 };
 
 function Viewfinder(divName, size, normal, hover) {

@@ -463,9 +463,9 @@ FormatJSON.prototype.cleanOptions = function(txt) {
                 opt.options = optStr[1].split("|");
                 opt.value = opt.options.shift();
                 if (l == 0) {
-                    openPos += _this.startAt[_this.i][0];
+                    openPos += _this.hasOwnProperty("startAt") ? _this.startAt[_this.i][0] : 0;
                 }
-                let linePlus = _this.startAt[_this.i][1];
+                let linePlus = _this.hasOwnProperty("startAt") ?_this.startAt[_this.i][1] : 0;
                 opt.pos = [openPos, l + linePlus];
 
                 optLine.push(opt);
@@ -485,7 +485,7 @@ FormatJSON.prototype.manageOptions = function(options, json) {
     /* Generates the options obj that will be added to the main obj */
     // FIXME REWORK ALL THIS SHIT
     var o = {};
-    if (this.transfer[this.i] && this.transfer[this.i].length > 0) {
+    if (this.transfer && this.transfer[this.i] && this.transfer[this.i].length > 0) {
         options = [this.transfer[this.i], ...options];
     }
 
