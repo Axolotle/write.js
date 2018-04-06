@@ -558,6 +558,8 @@ Animation.prototype.initMap = function (box) {
     var blocked = false;
     var required = new Set();
     var tags = [];
+    var special = new Set(Object.keys(init.specialActions));
+    var monologues = _this.monologues;
 
     render();
     update();
@@ -603,8 +605,8 @@ Animation.prototype.initMap = function (box) {
                 move("right", info[stage][y][x+1]);
             } else if (["ArrowDown", "Down", 40].indexOf(key) > -1) {
                 move("down", info[stage][y+1][x]);
-            } else if ([" ", "U+0020", 32].indexOf(key) > -1) {
-                return;// action();
+            } else if ([" ", "U+0020", 32].indexOf(key) > -1 && special.has(info[stage][y][x])) {
+                specialAction(info[stage][y][x]);
             } else {
                 return;
             }
@@ -630,16 +632,29 @@ Animation.prototype.initMap = function (box) {
             mapY += 1;
             y += 1;
         }
+        // Start vomiting
 
         if (symbol === "0") {
-            stage = 1;
             render();
+            stage = 1;
         } else if (symbol === "1") {
             stage = 0;
             render();
+        } else if (special.has(symbol)) {
+            render();
+            let opt = init.specialActions[symbol];
+            let txt = " " + opt.text + " ";
+            let middle = Math.floor(box.x / 2) - Math.ceil(txt.length / 2);
+            let tag = {
+                type: "s",
+                line: 2,
+                open: middle,
+                close: middle + txt.length
+            };
+            tags.push(tag);
+            blit(txt, 2, middle);
         } else if ([" ", "▒"].indexOf(symbol) == -1 && roomDisplay.symbol != symbol) {
             let room = rooms[stage][symbol];
-            // Start vomiting
             roomDisplay.symbol = symbol;
             roomDisplay.txt = (stage == 0 ? " Rdc - " : " 1er : ") + (room.name || symbol) + " ";
             roomDisplay.tag.close = roomDisplay.txt.length + roomDisplay.tag.open;
@@ -656,6 +671,8 @@ Animation.prototype.initMap = function (box) {
             }
             if (room.hasOwnProperty("fixedText")) {
                 txt.push(room.fixedText);
+                let mono = monologues[Math.floor(Math.random() * 30)];
+                if (mono) txt.push(mono);
             }
             if (room.hasOwnProperty("randomText")) {
                 if (room.hasOwnProperty("removeRandom")) {
@@ -767,6 +784,28 @@ Animation.prototype.initMap = function (box) {
         actions = undefined;
     }
 
+    function specialAction(symbol) {
+        if (symbol === "░") {
+            return;
+        }
+        blocked = true;
+        render();
+        let opt = init.specialActions[symbol];
+        if (symbol === "▶") {
+            required.add(opt.effect)
+        }
+        if (symbol === "▷" || symbol === "△" || symbol === "▶") {
+            renderText([opt.response, "\n\n{{tag::s}} continuer {{tag::/s}}"]);
+        } else if (symbol === "▬") {
+            displayPlan();
+        }
+        update();
+    }
+
+    function displayPlan() {
+
+    }
+
     function getRequired(elems) {
         // Return a required name or null if none have been found
         for (const elem of elems) {
@@ -788,6 +827,7 @@ Animation.prototype.initMap = function (box) {
     }
 
     function renderText(txt) {
+        // then start crying for me
         let formatter = new FormatJSON();
         let width = box.x * (3/5) - 6;
         let mY = 2;
@@ -796,11 +836,11 @@ Animation.prototype.initMap = function (box) {
         txt = formatter.cleanOptions(txt);
 
         let actualTxt = boxify(txt.txt, width, txt.txt.length, mX-1, mY-1, true);
+
         blit(actualTxt, 1, box.x * (1/5));
         mY += 1;
         mX += Math.floor(box.x * (1/5));
         blocked = true;
-
         // FIXME tag stuff bordel
         if (txt.options.length > 0) {
             let options = formatter.manageOptions(txt.options).tags;
@@ -811,9 +851,7 @@ Animation.prototype.initMap = function (box) {
                 let extra = 0;
                 if (i !== 0) {
                     extra = options.reduce((length, tag, index) => {
-                        // console.log("tag:", tag.line, tag.content, index);
                         if (tag.line === sLine && index < i) {
-                            // console.log("yep", length);
                             return length + tag.content.length;
                         } else {
                             return length;
@@ -831,7 +869,6 @@ Animation.prototype.initMap = function (box) {
                     tags.push(tag);
                     if (eLine - sLine > 1) {
                         for (let l = sLine + 1; l < eLine; l++) {
-                            // console.log(txt.txt[l]);
                             tag = {type: content};
                             tag.line = l + mY;
                             tag.open = 0 + mX;

@@ -430,7 +430,6 @@ Box.prototype.addTags = function(tag) {
 
     // Rewrites the line with the tag to include
     var newLine = prevTxt.substring(0, iOpen) + opening + prevTxt.substring(iOpen, iClose) + closing + prevTxt.substr(iClose);
-
     this.lines[l].innerHTML = newLine;
 
 };
