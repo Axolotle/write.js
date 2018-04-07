@@ -561,6 +561,7 @@ Animation.prototype.initMap = function (box) {
     var tags = [];
     var special = new Set(Object.keys(init.specialActions));
     var monologues = _this.monologues;
+    var timedEvent = _this.timedEvent;
 
     render();
     update();
@@ -712,7 +713,7 @@ Animation.prototype.initMap = function (box) {
             if (room.hasOwnProperty("effect")) {
                 if (room.effect == "game_over") {
                     gameover = true;
-                } else if (Number.isIntegrer(room.effect)) {
+                } else if (Number.isInteger(room.effect)) {
                     startTime += room.effect;
                 } else {
                     required.add(room.effect);
@@ -727,7 +728,15 @@ Animation.prototype.initMap = function (box) {
                     }
                 }
             }
-            if (room.hasOwnProperty("actions")) {
+            console.log(timedEvent[0].time*1000, Date.now() - startTime);
+            if (timedEvent[0] && timedEvent[0].time * 1000 < Date.now() - startTime) {
+                let ev = timedEvent.shift();
+                txt.push(pick(ev.randomText));
+            }
+            if (timedEvent[0] == undefined) {
+                gameover = true;
+                txt.push("\n\n{{tag::s}} continuer {{tag::/s}}");
+            } else if (room.hasOwnProperty("actions")) {
                 if (!Array.isArray(room.actions)) {
                     let req = getRequired(Object.keys(room.actions)) || "default";
                     actions = room.actions[req];
@@ -751,7 +760,6 @@ Animation.prototype.initMap = function (box) {
             render();
         }
         update();
-
     }
 
     function action(n) {
