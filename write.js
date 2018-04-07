@@ -568,51 +568,51 @@ Animation.prototype.initMap = function (box) {
 
     window.addEventListener("keydown", checkKeys);
 
-
     function checkKeys(e) {
         const key = e.key || e.keyIdentifier || e.keyCode;
+        console.log(e.key, e.keyIdentifier, e.keyCode);
         // TODO check compatibility for Array.prototype.includes()
         if (gameover) {
             if ([" ", "U+0020", 32].indexOf(key) > -1) {
-                box.cleanLines();
-                if (map === null) {
-                    window.removeEventListener("keydown", checkKeys);
-                    resolve();
-                    return;
-                } else {
-                    map = info = rooms = null;
-                    let txt = [
-                        "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
-                        "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
-                        "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
-                        "                           ",
-                        "           retry           ",
-                    ];
-                    x = Math.floor((box.x / 2) - (txt[0].length / 2));
-                    y = Math.floor((box.y / 2) - 3);
-                    for (const line of txt) {
-                        box.printOnLine(y++ - 2, x - 2, line);
-                    }
-                    box.addTags({
-                        type: "s",
-                        line: y - 3,
-                        open: x + 8,
-                        close: x + 15,
-                    })
-
-                    return;
-                }
-                // gameover = false;
+                // box.cleanLines();
+                // if (map === null) {
+                //     window.removeEventListener("keydown", checkKeys);
+                //     resolve();
+                //     return;
+                // } else {
+                //     map = info = rooms = null;
+                //     let txt = [
+                //         "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
+                //         "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
+                //         "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
+                //         "                           ",
+                //         "           retry           ",
+                //     ];
+                //     x = Math.floor((box.x / 2) - (txt[0].length / 2));
+                //     y = Math.floor((box.y / 2) - 3);
+                //     for (const line of txt) {
+                //         box.printOnLine(y++ - 2, x - 2, line);
+                //     }
+                //     box.addTags({
+                //         type: "s",
+                //         line: y - 3,
+                //         open: x + 8,
+                //         close: x + 15,
+                //     })
+                //
+                //     return;
+                // }
+                gameover = false;
             } else {
                 return;
             }
         }
         if (blocked && actions) {
-            if (key == "x" && actions[0]) {
+            if (["x", "", 88].indexOf(key) > -1 && actions[0]) {
                 action(0);
-            } else if (key == "c" && actions[1]) {
+            } else if (["c", "", 67].indexOf(key) > -1 && actions[1]) {
                 action(1);
-            } else if (key == "v" && actions[2]) {
+            } else if (["v", "", 86].indexOf(key) > -1 && actions[2]) {
                 action(2);
             } else {
                 return;
@@ -688,6 +688,7 @@ Animation.prototype.initMap = function (box) {
             roomDisplay.txt = (stage == 0 ? " Rdc - " : " 1er : ") + (room.name || symbol) + " ";
             roomDisplay.tag.close = roomDisplay.txt.length + roomDisplay.tag.open;
             render();
+            var teleCoord;
 
             let txt = [];
             if (room.hasOwnProperty("removeRandom") && room.randomText.length == 0) {
@@ -700,8 +701,8 @@ Animation.prototype.initMap = function (box) {
             }
             if (room.hasOwnProperty("fixedText")) {
                 txt.push(room.fixedText);
-                let mono = monologues[Math.floor(Math.random() * 30)];
-                if (mono) txt.push(mono);
+                let mono = monologues[Math.floor(Math.random() * 100)];
+                if (mono) txt.push("\n" + mono);
             }
             if (room.hasOwnProperty("randomText")) {
                 if (room.hasOwnProperty("removeRandom")) {
@@ -713,6 +714,9 @@ Animation.prototype.initMap = function (box) {
             if (room.hasOwnProperty("effect")) {
                 if (room.effect == "game_over") {
                     gameover = true;
+txt.push("\nGAMEOVER\n")
+                } else if (Array.isArray(room.effect)) {
+                    teleCoord = room.effect;
                 } else if (Number.isInteger(room.effect)) {
                     startTime += room.effect;
                 } else {
@@ -729,8 +733,12 @@ Animation.prototype.initMap = function (box) {
                 }
             }
             console.log(timedEvent[0].time*1000, Date.now() - startTime);
+            if (teleCoord) {
+                teleport(teleCoord);
+            }
             if (timedEvent[0] && timedEvent[0].time * 1000 < Date.now() - startTime) {
                 let ev = timedEvent.shift();
+                txt.push("");
                 txt.push(pick(ev.randomText));
             }
             if (timedEvent[0] == undefined) {
@@ -786,6 +794,7 @@ Animation.prototype.initMap = function (box) {
                 text.push(failure.text);
                 if (failure.effect == "game_over") {
                     gameover = true;
+text.push("\nGAMEOVER\n")
                 }
                 if (Array.isArray(failure.effect)) {
                     teleport(failure.effect);
@@ -806,6 +815,7 @@ Animation.prototype.initMap = function (box) {
                     // WIN
                 } else if (effect == "game_over") {
                     gameover = true;
+text.push("\nGAMEOVER\n")
                 } else {
                     required.add(effect);
                 }
@@ -849,13 +859,17 @@ Animation.prototype.initMap = function (box) {
         if (symbol === "▷" || symbol === "△" || symbol === "▶") {
             renderText([opt.response, "\n\n{{tag::s}} continuer {{tag::/s}}"]);
         } else if (symbol === "▬") {
-            displayPlan();
+            let xpos = Math.floor((box.x - init.plan[0].length) / 2);
+            let ypos = Math.floor((box.y - init.plan.length) / 2)
+            blit(init.plan, ypos, xpos);
+            tags.push({
+                type: "s",
+                line: ypos + 25,
+                open: xpos + 40,
+                close: xpos + 51
+            })
         }
         update();
-    }
-
-    function displayPlan() {
-
     }
 
     function getRequired(elems) {
