@@ -525,9 +525,8 @@ Animation.prototype.notesReader = function(cursor) {
 Animation.prototype.initMap = function (box) {
     return new Promise((resolve, reject) => {
     const _this = this;
-    var map = this.stages.map(stage => stage.map.split("\n"));
-    var info = this.stages.map(stage => stage.physic.split("\n"));
-    var rooms = this.stages.map(stage => stage.rooms);
+    const map = _this.stages.map(stage => stage.map.split("\n"));
+    const info = _this.stages.map(stage => stage.physic.split("\n"));
     const mapMaxX = map[0][0].length;
     const mapMaxY = map[0].length;
     const maxX = box.x - box.marginX * 2;
@@ -536,75 +535,82 @@ Animation.prototype.initMap = function (box) {
     const middleY = Math.round(box.y / _this.player.posDivY) - box.marginY;
     const nonWalkable = ["▉"];
 
-    var init = _this.init;
-    var mapX = init.x - middleX;
-    var mapY = init.y - middleY;
-    var x = init.x;
-    var y = init.y;
-    var roomDisplay = {
-        symbol: init.symbol,
-        line: maxY - 2,
-        txt: init.roomName,
-        tag: {
-            type: "s",
-            line: maxY - 2,
-            open: 2,
-            close: init.roomName.length + 2,
-        },
-    };
-    var stage = init.stage;
-    var startTime = Date.now();
-    var gameover = false;
-    var actions = undefined;
-    var blocked = false;
-    var required = new Set();
-    var tags = [];
-    var special = new Set(Object.keys(init.specialActions));
-    var monologues = _this.monologues;
-    var timedEvent = _this.timedEvent;
+    const init = _this.init;
+    const monologues = _this.monologues;
+    const timedEvent = _this.timedEvent;
+    const special = new Set(Object.keys(init.specialActions));
 
-    render();
-    update();
+    var rooms;
+    var mapX, mapY, x, y, stage, startTime;
+    var roomDisplay, actions, required, tags;
+    var gameover, blocked, tevent;
+    initGame();
 
     window.addEventListener("keydown", checkKeys);
 
+    function initGame() {
+        rooms = _this.stages.map(stage => JSON.parse(JSON.stringify(stage.rooms)));
+        mapX = init.x - middleX;
+        mapY = init.y - middleY;
+        x = init.x;
+        y = init.y;
+        roomDisplay = {
+            symbol: init.symbol,
+            line: maxY - 2,
+            txt: init.roomName,
+            tag: {
+                type: "s",
+                line: maxY - 2,
+                open: 2,
+                close: init.roomName.length + 2,
+            },
+        };
+        stage = init.stage;
+        startTime = Date.now();
+        gameover = false;
+        actions = undefined;
+        blocked = false;
+        required = new Set();
+        tags = [];
+        tevent = 0;
+
+        render();
+        update();
+    }
+
     function checkKeys(e) {
         const key = e.key || e.keyIdentifier || e.keyCode;
-        console.log(e.key, e.keyIdentifier, e.keyCode);
         // TODO check compatibility for Array.prototype.includes()
         if (gameover) {
-            if ([" ", "U+0020", 32].indexOf(key) > -1) {
-                box.cleanLines();
-                if (map === null) {
-                    window.removeEventListener("keydown", checkKeys);
-                    resolve();
-                    return;
+            if (!blocked) {
+                if ([" ", "U+0020", 32].indexOf(key) > -1) {
+                    initGame();
+                    blocked = gameover = false;
                 } else {
-                    map = info = rooms = null;
-                    let txt = [
-                        "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
-                        "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
-                        "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
-                        "                           ",
-                        "           retry           ",
-                    ];
-                    x = Math.floor((box.x / 2) - (txt[0].length / 2));
-                    y = Math.floor((box.y / 2) - 3);
-                    for (const line of txt) {
-                        box.printOnLine(y++ - 2, x - 2, line);
-                    }
-                    box.addTags({
-                        type: "s",
-                        line: y - 3,
-                        open: x + 8,
-                        close: x + 15,
-                    })
-
                     return;
                 }
-                // gameover = false;
-            } else {
-                return;
+            }
+            else {
+                box.cleanLines();
+                let txt = [
+                    "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
+                    "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
+                    "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
+                    "                           ",
+                    "           retry           ",
+                ];
+                x = Math.floor((box.x / 2) - (txt[0].length / 2));
+                y = Math.floor((box.y / 2) - 3);
+                for (const line of txt) {
+                    box.printOnLine(y++ - 2, x - 2, line);
+                }
+                box.addTags({
+                    type: "s",
+                    line: y - 3,
+                    open: x + 8,
+                    close: x + 15,
+                });
+                blocked = false;
             }
         }
         if (blocked && actions) {
@@ -645,7 +651,6 @@ Animation.prototype.initMap = function (box) {
     }
 
     function move(dir, symbol) {
-        console.log(dir, "|"+symbol+"|");
         if (nonWalkable.indexOf(symbol) > -1) return;
 
         if (dir == "left" && x > 0) {
@@ -731,16 +736,14 @@ Animation.prototype.initMap = function (box) {
                     }
                 }
             }
-            console.log(timedEvent[0].time*1000, Date.now() - startTime);
             if (teleCoord) {
                 teleport(teleCoord);
             }
-            if (timedEvent[0] && timedEvent[0].time * 1000 < Date.now() - startTime) {
-                let ev = timedEvent.shift();
+            if (timedEvent[tevent] && timedEvent[tevent].time * 1000 < Date.now() - startTime) {
                 txt.push("");
-                txt.push(pick(ev.randomText));
+                txt.push(pick(timedEvent[tevent++].randomText));
             }
-            if (timedEvent[0] == undefined) {
+            if (timedEvent[tevent] == undefined) {
                 gameover = true;
                 txt.push("\n\n{{tag::s}} continuer {{tag::/s}}");
             } else if (room.hasOwnProperty("actions")) {
