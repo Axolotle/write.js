@@ -543,7 +543,7 @@ Animation.prototype.initMap = function (box) {
     var rooms;
     var mapX, mapY, x, y, stage, startTime;
     var roomDisplay, actions, required, tags;
-    var gameover, blocked, tevent;
+    var gameover, win, blocked, tevent;
     initGame();
 
     window.addEventListener("keydown", checkKeys);
@@ -575,6 +575,7 @@ Animation.prototype.initMap = function (box) {
         stage = init.stage;
         startTime = Date.now();
         gameover = false;
+        win = false;
         actions = undefined;
         blocked = false;
         required = new Set();
@@ -588,6 +589,21 @@ Animation.prototype.initMap = function (box) {
     function checkKeys(e) {
         const key = e.key || e.keyIdentifier || e.keyCode;
         // TODO check compatibility for Array.prototype.includes()
+        if (win) {
+            box.cleanLines();
+            stop();
+            let text = [
+                "╷ ╷╭─╮╷ ╷   ╷╷╷╶┬╴╭╮╷",
+                "╰─┤│ ││ │   │││ │ │││",
+                "╶─╯╰─╯╰─╯   ╰╯╯╶┴╴╵╰╯",
+            ];
+            x = Math.floor((box.x / 2) - (text[0].length / 2));
+            y = Math.floor((box.y / 2) - 1.5);
+            for (const line of text) {
+                box.printOnLine(y++ - 2, x - 2, line);
+            }
+            return resolve();
+        }
         if (gameover) {
             if (!blocked) {
                 if ([" ", "U+0020", 32].indexOf(key) > -1) {
@@ -607,7 +623,7 @@ Animation.prototype.initMap = function (box) {
                     "           retry           ",
                 ];
                 x = Math.floor((box.x / 2) - (txt[0].length / 2));
-                y = Math.floor((box.y / 2) - 3);
+                y = Math.floor((box.y / 2) - 1.5);
                 for (const line of txt) {
                     box.printOnLine(y++ - 2, x - 2, line);
                 }
@@ -817,10 +833,8 @@ Animation.prototype.initMap = function (box) {
                 let effect = action.success.effect;
                 if (Array.isArray(effect)) {
                     teleCoord = effect;
-                } else if (effect.indexOf("open") > -1) {
-                    // open door
                 } else if (effect == "you_win") {
-                    // WIN
+                    win = true;
                 } else if (effect == "game_over") {
                     gameover = true;
                 } else {
