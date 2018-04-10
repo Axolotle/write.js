@@ -574,45 +574,45 @@ Animation.prototype.initMap = function (box) {
         // TODO check compatibility for Array.prototype.includes()
         if (gameover) {
             if ([" ", "U+0020", 32].indexOf(key) > -1) {
-                // box.cleanLines();
-                // if (map === null) {
-                //     window.removeEventListener("keydown", checkKeys);
-                //     resolve();
-                //     return;
-                // } else {
-                //     map = info = rooms = null;
-                //     let txt = [
-                //         "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
-                //         "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
-                //         "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
-                //         "                           ",
-                //         "           retry           ",
-                //     ];
-                //     x = Math.floor((box.x / 2) - (txt[0].length / 2));
-                //     y = Math.floor((box.y / 2) - 3);
-                //     for (const line of txt) {
-                //         box.printOnLine(y++ - 2, x - 2, line);
-                //     }
-                //     box.addTags({
-                //         type: "s",
-                //         line: y - 3,
-                //         open: x + 8,
-                //         close: x + 15,
-                //     })
-                //
-                //     return;
-                // }
-                gameover = false;
+                box.cleanLines();
+                if (map === null) {
+                    window.removeEventListener("keydown", checkKeys);
+                    resolve();
+                    return;
+                } else {
+                    map = info = rooms = null;
+                    let txt = [
+                        "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
+                        "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
+                        "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
+                        "                           ",
+                        "           retry           ",
+                    ];
+                    x = Math.floor((box.x / 2) - (txt[0].length / 2));
+                    y = Math.floor((box.y / 2) - 3);
+                    for (const line of txt) {
+                        box.printOnLine(y++ - 2, x - 2, line);
+                    }
+                    box.addTags({
+                        type: "s",
+                        line: y - 3,
+                        open: x + 8,
+                        close: x + 15,
+                    })
+
+                    return;
+                }
+                // gameover = false;
             } else {
                 return;
             }
         }
         if (blocked && actions) {
-            if (["x", "", 88].indexOf(key) > -1 && actions[0]) {
+            if (["x", "U+0058", 88].indexOf(key) > -1 && actions[0]) {
                 action(0);
-            } else if (["c", "", 67].indexOf(key) > -1 && actions[1]) {
+            } else if (["c", "U+0043", 67].indexOf(key) > -1 && actions[1]) {
                 action(1);
-            } else if (["v", "", 86].indexOf(key) > -1 && actions[2]) {
+            } else if (["v", "U+0056", 86].indexOf(key) > -1 && actions[2]) {
                 action(2);
             } else {
                 return;
@@ -714,7 +714,6 @@ Animation.prototype.initMap = function (box) {
             if (room.hasOwnProperty("effect")) {
                 if (room.effect == "game_over") {
                     gameover = true;
-txt.push("\nGAMEOVER\n")
                 } else if (Array.isArray(room.effect)) {
                     teleCoord = room.effect;
                 } else if (Number.isInteger(room.effect)) {
@@ -773,7 +772,7 @@ txt.push("\nGAMEOVER\n")
     function action(n) {
         let action = actions[n];
         let success = true;
-        let text = [];
+        let txt = [];
         let teleCoord;
         if (action.hasOwnProperty("required")) {
             let failure;
@@ -791,10 +790,9 @@ txt.push("\nGAMEOVER\n")
             }
             if (failure !== undefined) {
                 success = false;
-                text.push(failure.text);
+                txt.push(failure.text);
                 if (failure.effect == "game_over") {
                     gameover = true;
-text.push("\nGAMEOVER\n")
                 }
                 if (Array.isArray(failure.effect)) {
                     teleport(failure.effect);
@@ -803,7 +801,7 @@ text.push("\nGAMEOVER\n")
         }
         if (success && action.hasOwnProperty("success") && action.success !== null) {
             if (action.success.hasOwnProperty("text")) {
-                text.push(action.success.text);
+                txt.push(action.success.text);
             }
             if (action.success.hasOwnProperty("effect") && action.success.effect !== null) {
                 let effect = action.success.effect;
@@ -815,7 +813,6 @@ text.push("\nGAMEOVER\n")
                     // WIN
                 } else if (effect == "game_over") {
                     gameover = true;
-text.push("\nGAMEOVER\n")
                 } else {
                     required.add(effect);
                 }
@@ -835,10 +832,10 @@ text.push("\nGAMEOVER\n")
         if (teleCoord) {
             teleport(teleCoord);
         }
-        text.push("\n\n{{tag::s}} continuer {{tag::/s}}");
+        txt.push("\n\n{{tag::s}} continuer {{tag::/s}}");
         render();
-        if (text.length > 1) {
-            renderText(text);
+        if (txt.length > 1) {
+            renderText(txt);
         } else {
             blocked = false;
         }
