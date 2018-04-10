@@ -548,6 +548,13 @@ Animation.prototype.initMap = function (box) {
 
     window.addEventListener("keydown", checkKeys);
 
+    function stop() {
+        window.removeEventListener("keydown", checkKeys);
+        window.removeEventListener("stop", stop);
+    }
+
+    window.addEventListener("stop", stop);
+
     function initGame() {
         rooms = _this.stages.map(stage => JSON.parse(JSON.stringify(stage.rooms)));
         mapX = init.x - middleX;
