@@ -590,50 +590,70 @@ Animation.prototype.initMap = function (box) {
         const key = e.key || e.keyIdentifier || e.keyCode;
         // TODO check compatibility for Array.prototype.includes()
         if (win) {
-            box.cleanLines();
-            stop();
-            let text = [
-                "╷ ╷╭─╮╷ ╷   ╷╷╷╶┬╴╭╮╷",
-                "╰─┤│ ││ │   │││ │ │││",
-                "╶─╯╰─╯╰─╯   ╰╯╯╶┴╴╵╰╯",
-            ];
-            x = Math.floor((box.x / 2) - (text[0].length / 2));
-            y = Math.floor((box.y / 2) - 1.5);
-            for (const line of text) {
-                box.printOnLine(y++ - 2, x - 2, line);
-            }
-            return resolve();
-        }
-        if (gameover) {
-            if (!blocked) {
-                if ([" ", "U+0020", 32].indexOf(key) > -1) {
-                    initGame();
-                    blocked = gameover = false;
-                } else {
+            if ([" ", "U+0020", 32].indexOf(key) > -1) {
+                if (blocked) {
+                    box.cleanLines();
+                    let formatter = new FormatJSON();
+                    let text = formatter.splitTxt(init.extro, [0,0], {x: 57});
+                    x = Math.floor((box.x / 2) - 28.5) - 1;
+                    y = Math.floor((box.y / 2) - (text.length / 2)) - 1;
+                    for (const line of text) {
+                        box.printOnLine(y++, x, line);
+                    }
+                    blocked = false;
                     return;
                 }
-            }
-            else {
-                box.cleanLines();
-                let txt = [
-                    "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
-                    "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
-                    "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
-                    "                           ",
-                    "           retry           ",
-                ];
-                x = Math.floor((box.x / 2) - (txt[0].length / 2));
-                y = Math.floor((box.y / 2) - 1.5);
-                for (const line of txt) {
-                    box.printOnLine(y++ - 2, x - 2, line);
+                else {
+                    box.cleanLines();
+                    stop();
+                    let text = [
+                        "╷ ╷╭─╮╷ ╷   ╷╷╷╶┬╴╭╮╷",
+                        "╰─┤│ ││ │   │││ │ │││",
+                        "╶─╯╰─╯╰─╯   ╰╯╯╶┴╴╵╰╯",
+                    ];
+                    x = Math.floor((box.x / 2) - (text[0].length / 2)) - 1;
+                    y = Math.floor((box.y / 2) - 1.5) - 1;
+                    for (const line of text) {
+                        box.printOnLine(y++, x, line);
+                    }
+                    return resolve();
                 }
-                box.addTags({
-                    type: "s",
-                    line: y - 3,
-                    open: x + 8,
-                    close: x + 15,
-                });
-                blocked = false;
+            } else {
+                return;
+            }
+        }
+        if (gameover) {
+            if ([" ", "U+0020", 32].indexOf(key) > -1) {
+                if (!blocked) {
+                    initGame();
+                    blocked = gameover = false;
+                    return;
+                }
+                else {
+                    box.cleanLines();
+                    let txt = [
+                        "╭─╮╭─┐╭╮╮┌─╴   ╭─╮╷ ╷┌─╴┌─╮",
+                        "│╶╮├─┤│││├─╴   │ ││╭╯├─╴├┬╯",
+                        "╰─╯╵ ╵╵╵╵╰─╴   ╰─╯╰╯ ╰─╴╵ ╰",
+                        "                           ",
+                        "           retry           ",
+                    ];
+                    x = Math.floor((box.x / 2) - (txt[0].length / 2));
+                    y = Math.floor((box.y / 2) - 1.5);
+                    for (const line of txt) {
+                        box.printOnLine(y++ - 2, x - 2, line);
+                    }
+                    box.addTags({
+                        type: "s",
+                        line: y - 3,
+                        open: x + 8,
+                        close: x + 15,
+                    });
+                    blocked = false;
+                    return;
+                }
+            } else {
+                return;
             }
         }
         if (blocked && actions) {
@@ -715,7 +735,6 @@ Animation.prototype.initMap = function (box) {
             roomDisplay.symbol = symbol;
             roomDisplay.txt = (stage == 0 ? " Rdc - " : " 1er : ") + (room.name || symbol) + " ";
             roomDisplay.tag.close = roomDisplay.txt.length + roomDisplay.tag.open;
-            render();
             var teleCoord;
 
             let txt = [];
@@ -780,14 +799,18 @@ Animation.prototype.initMap = function (box) {
                     txt.push("");
                     let opt = ["x", "c", "v"];
                     for (let i = 0, len = actions.length ; i < len; i++) {
-                        txt.push("[" + opt[i] + "] " + actions[i].text);
+                        txt.push("{{tag::s}} " + opt[i] + " {{tag::/s}} " + actions[i].text);
                     }
                 }
             } else {
                 txt.push("\n\n{{tag::s}} continuer {{tag::/s}}");
             }
             if (txt.length > 1) {
+                txt.unshift("{{tag::s}} " + rooms[stage][symbol].name + " {{tag::/s}}\n");
+                render(true);
                 renderText(txt);
+            } else {
+                render();
             }
         } else {
             render();
@@ -977,10 +1000,13 @@ Animation.prototype.initMap = function (box) {
         }
     }
 
-    function render() {
+    function render(dontShow) {
         display = getMapPortion();
         blit("▉", middleY, middleX);
-        blit(roomDisplay.txt, roomDisplay.line, 2);
+        if (!dontShow) {
+            blit(roomDisplay.txt, roomDisplay.line, 2);
+            tags.push(roomDisplay.tag);
+        }
     }
 
     function blit(content, startY, startX) {
@@ -998,7 +1024,6 @@ Animation.prototype.initMap = function (box) {
         for (let l = 0; l < maxY; l++) {
             box.printOnLine(l, 0, display[l]);
         }
-        tags.push(roomDisplay.tag);
         for (const tag of tags) {
             box.addTags(tag);
         }
