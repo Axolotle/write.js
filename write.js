@@ -543,7 +543,7 @@ Animation.prototype.initMap = function (box) {
     var rooms;
     var mapX, mapY, x, y, stage, startTime;
     var roomDisplay, actions, required, tags;
-    var gameover, win, blocked, tevent;
+    var gameover, win, blocked, tevent, intro;
     initGame();
 
     window.addEventListener("keydown", checkKeys);
@@ -574,21 +574,58 @@ Animation.prototype.initMap = function (box) {
         };
         stage = init.stage;
         startTime = Date.now();
+        intro = 1;
         gameover = false;
         win = false;
         actions = undefined;
-        blocked = false;
+        blocked = true;
         required = new Set();
         tags = [];
         tevent = 0;
 
-        render();
-        update();
+        checkKeys({key: " "});
     }
 
     function checkKeys(e) {
         const key = e.key || e.keyIdentifier || e.keyCode;
         // TODO check compatibility for Array.prototype.includes()
+        if (intro && blocked) {
+            if ([" ", "U+0020", 32].indexOf(key) > -1) {
+                // box.removeTags();
+                let introText;
+
+                if (intro == 1) introText = init.intro[0];
+                if (intro == 2) introText = init.intro[1];
+                if (intro == 3) {
+                    intro = false;
+                    blocked = false;
+                    render();
+                    update();
+                    return;
+                }
+
+                box.cleanLines();
+                let formatter = new FormatJSON();
+                let text = formatter.splitTxt(introText, [0,0], {x: 57});
+                let xx = Math.floor((box.x / 2) - 28.5) - 1;
+                let yy = Math.floor((box.y / 2) - (text.length / 2)) - 1;
+                for (const line of text) {
+                    box.printOnLine(yy++, xx, line);
+                }
+                xx = Math.floor((box.x / 2) - 4.5) - 1;
+                yy = box.y - 4;
+                box.printOnLine(yy, xx, "continuer");
+                box.addTags({
+                    type: "s",
+                    line: yy,
+                    open: xx - 1,
+                    close: xx + 10,
+                });
+
+                intro++;
+                return;
+            }
+        }
         if (win) {
             if ([" ", "U+0020", 32].indexOf(key) > -1) {
                 if (blocked) {
@@ -626,7 +663,7 @@ Animation.prototype.initMap = function (box) {
             if ([" ", "U+0020", 32].indexOf(key) > -1) {
                 if (!blocked) {
                     initGame();
-                    blocked = gameover = false;
+                    gameover = false;
                     return;
                 }
                 else {
@@ -898,20 +935,20 @@ Animation.prototype.initMap = function (box) {
         render();
         let opt = init.specialActions[symbol];
         if (symbol === "▶") {
-            required.add(opt.effect)
+            required.add(opt.effect);
         }
         if (symbol === "▷" || symbol === "△" || symbol === "▶") {
             renderText([opt.response, "\n\n{{tag::s}} continuer {{tag::/s}}"]);
         } else if (symbol === "▬") {
-            let xpos = Math.floor((box.x - init.plan[0].length) / 2);
-            let ypos = Math.floor((box.y - init.plan.length) / 2)
+            let xpos = Math.floor((box.x - init.plan[0].length) / 2) - 1;
+            let ypos = Math.floor((box.y - init.plan.length) / 2) - 1;
             blit(init.plan, ypos, xpos);
             tags.push({
                 type: "s",
                 line: ypos + 25,
                 open: xpos + 40,
                 close: xpos + 51
-            })
+            });
         }
         update();
     }
