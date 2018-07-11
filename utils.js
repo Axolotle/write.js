@@ -108,7 +108,9 @@ FormatJSON.prototype.getNewJSON = function(JSONs) {
         var newTxt;
         // TODO allow formatting combination
         // TODO just modify the json instead of creationg new one
-        if (format == undefined || format == "paragraph") {
+        if (format == "none") {
+          return json;
+        } else if (format == undefined || format == "paragraph") {
             newTxt = _this.splitTxt(txt, startAt, zone);
             newTxt = _this.cleanOptions(newTxt);
         } else if (format == "align") {
