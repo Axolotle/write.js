@@ -522,6 +522,51 @@ Animation.prototype.notesReader = function(cursor) {
 
     });
 };
+Animation.prototype.speedReading = function (box) {
+    return new Promise ((resolve, reject) => {
+        const _this = this;
+        let div = box.x / 3;
+        const posLeft = div;
+        const posRight = div * 2;
+        const posMid = Math.floor(box.x / 2 - box.marginX);
+        const y = Math.floor(box.y / 2 - box.marginY);
+        var l = 0;
+        var speed = 30;
+        var pause = 1500;
+
+        async function displayWord(word) {
+          let wait = speed * word.length;
+          let len = word.length;
+          let extra = 0;
+          if (len > 2 && len < 6) extra = 1;
+          else if (len > 5 && len < 10) extra = 2;
+          else if (len > 9) extra = 3;
+
+          box.printOnLine(y, posMid - extra, word);
+          await sleep(wait > 200 ? wait : 200);
+          requestAnimationFrame(writing);
+        }
+
+        async function writing() {
+            if (_this.stop) reject("User triggered a stop event");
+            else {
+                box.cleanLines(y);
+                if (_this.txt[l] === undefined) {
+                  resolve();
+                }
+                else if (_this.txt[l].length === 0) {
+                    l++;
+                    await sleep(pause);
+                    requestAnimationFrame(writing);
+                }
+                else {
+                    displayWord(_this.txt[l].shift());
+                }
+            }
+        }
+        requestAnimationFrame(writing);
+    });
+};
 Animation.prototype.initMap = function (box) {
     return new Promise((resolve, reject) => {
     const _this = this;
