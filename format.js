@@ -13,12 +13,28 @@
  */
 export var syntax = {
     /**
+     * Returns the first syntax match
+     * @param {string} str
+     * @returns {Array} match Array
+     */
+    captureFirst(str) {
+        return str.match(/\{\{([a-z]+)::([^}]+)\}\}/);
+    },
+    /**
      * Returns a string without syntax related content
      * @param {string} str
      * @returns {string}
      */
     remove(str) {
         return str.replace(/\{\{[^}]+\}\}/g, "");
+    },
+    /**
+     * Returns a string without first occurence of syntax related content
+     * @param {string} str
+     * @returns {string}
+     */
+    removeFirst(str) {
+        return str.replace(/\{\{[^}]+\}\}/, "");
     },
     /**
      * Returns the length of a string without syntax related content
@@ -64,4 +80,31 @@ export function split(txt, width, startAt=0) {
     });
 
     return newTxt;
+}
+
+/**
+ * Extracts syntax content and convert it into a options's object
+ * @param {string[]} txt
+ * @returns {{txt:string[], opt:Object}} Object composed of the previous text (minus syntax) and syntax's convertion object
+ */
+export function extractOptions(txt) {
+    var opts = {};
+
+    txt = txt.map((line, l) => {
+        let match;
+        while (match = syntax.captureFirst(line)) {
+            if (!opts.hasOwnProperty(match[1])) opts[match[1]] = [];
+
+            opts[match[1]].push({
+                // check if match[2] can be converted to a number
+                value: !isNaN(match[2] - parseFloat(match[2])) ? +match[2] : match[2],
+                index: match.index,
+                line: l,
+            });
+            line = syntax.removeFirst(line);
+        }
+        return line;
+    });
+
+    return {txt: txt, opts: opts};
 }
