@@ -6,45 +6,7 @@
  * @version 1.0
  */
 
-
-/**
- * Syntax related utilities
- * @namespace
- */
-export var syntax = {
-    /**
-     * Returns the first syntax match
-     * @param {string} str
-     * @returns {Array} match Array
-     */
-    captureFirst(str) {
-        return str.match(/\{\{([a-z]+)::([^}]+)\}\}/);
-    },
-    /**
-     * Returns a string without syntax related content
-     * @param {string} str
-     * @returns {string}
-     */
-    remove(str) {
-        return str.replace(/\{\{[^}]+\}\}/g, "");
-    },
-    /**
-     * Returns a string without first occurence of syntax related content
-     * @param {string} str
-     * @returns {string}
-     */
-    removeFirst(str) {
-        return str.replace(/\{\{[^}]+\}\}/, "");
-    },
-    /**
-     * Returns the length of a string without syntax related content
-     * @param {string} str
-     * @returns {number}
-     */
-    getRealLength(str) {
-        return this.remove(str).length;
-    }
-}
+import * as syntax from "./syntax.js";
 
 
 /**
