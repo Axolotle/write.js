@@ -1,3 +1,41 @@
+/**
+ * Utilities module.
+ * @module writejs/utils
+ * @author Nicolas Chesnais
+ * @license GPL-3.0
+ * @version 1.0
+ */
+
+/**
+ * Returns the dimensions of a glyph in pixels
+ * @param {string} [targetId="box"] - target element's id
+ * @param {string} [glyph="A"] - testing glyph
+ * @returns {{width:number, height:number}} dimensions in pixels of the displayed glyph
+ */
+export function getGlyphDimensions(targetId="box", glyph="A") {
+    var test = document.createElement("span");
+    test.style.visibility = "hidden";
+    document.getElementById(targetId).appendChild(test);
+    test.innerHTML = glyph;
+    var w = test.offsetWidth;
+    var h = test.offsetHeight;
+    test.remove();
+
+    return {width: w, height: h};
+}
+
+/**
+ * Returns the dimensions of the window in number of glyphs
+ * @param {{width:number, height:number}} glyph - glyph dimensions in pixels
+ * @returns {{width:number, height:number}} dimensions in glyphs of the window
+ */
+export function getWindowDimensions(glyph) {
+    return {
+        width: Math.floor(window.innerWidth / glyph.width),
+        height: Math.floor(window.innerHeight / glyph.height)
+    }
+}
+
 function readJSONFile(url) {
     return new Promise((resolve, reject) => {
         var rawFile = new XMLHttpRequest();
