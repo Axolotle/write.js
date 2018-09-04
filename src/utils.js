@@ -12,7 +12,7 @@
  * @param {string} [glyph="A"] - testing glyph
  * @returns {{width:number, height:number}} dimensions in pixels of the displayed glyph
  */
-export function getGlyphDimensions(targetId="box", glyph="A") {
+export function getGlyphDimensions(targetId="display", glyph="A") {
     var test = document.createElement("span");
     test.style.visibility = "hidden";
     document.getElementById(targetId).appendChild(test);
@@ -27,13 +27,19 @@ export function getGlyphDimensions(targetId="box", glyph="A") {
 /**
  * Returns the dimensions of the window in number of glyphs
  * @param {{width:number, height:number}} glyph - glyph dimensions in pixels
+ * @param {{x:number, y:number}} margin - margins in glyphs to substract to the window possible size
  * @returns {{width:number, height:number}} dimensions in glyphs of the window
  */
-export function getWindowDimensions(glyph) {
+export function getWindowDimensions(glyph, margin={x: 0, y:0}) {
     return {
-        width: Math.floor(window.innerWidth / glyph.width),
-        height: Math.floor(window.innerHeight / glyph.height)
+        width: Math.floor(window.innerWidth / glyph.width) - margin.x * 2,
+        height: Math.floor(window.innerHeight / glyph.height) - margin.y * 2
     }
+}
+
+
+export function has(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
 function readJSONFile(url) {

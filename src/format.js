@@ -70,3 +70,11 @@ export function extractOptions(txt) {
 
     return {txt: txt, opts: opts};
 }
+
+
+export function longestWord(words) {
+    return words.reduce((a, b) => {
+        if (b.length > a.length) return b;
+        return a;
+    });
+}
