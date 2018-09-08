@@ -1266,3 +1266,44 @@ Viewfinder.prototype.deactivate = function(skin) {
     window.dispatchEvent(new Event("deactivate"));
     this.div.removeChild(this.pointer);
 };
+
+
+function Talker(texts) {
+    this.content = texts.map(part => {
+        let w = box.x - box.marginX * 2;
+        part.text = splitText(part.text, w);
+        part.responses.map(response => {
+            if (response.hasOwnProperty("text")) {
+                response.text = splitText(part.text, w);
+            }
+            return response;
+        });
+        if (part.failure.hasOwnProperty("text")) {
+            part.failure = splitText(part.failure.text, w);
+        }
+        if (part.nothing && part.nothing.hasOwnProperty("text")) {
+            part.nothing = splitText(part.nothing.text, w);
+        }
+        return part;
+    });
+}
+Talker.prototype.init = async function (box) {
+    for (var i = 0, len = this.content.length; i < len; i++) {
+        let content = this.content[i];
+        await sleep(1000);
+        this.displayText(box, content.text);
+        var response = await this.respond();
+        console.log(response);
+        box.cleanLines();
+    }
+};
+Talker.prototype.displayText = function(box, txt) {
+    txt.forEach((line, i) => box.printOnLine(i, 0, line));
+};
+Talker.prototype.respond = function () {
+    return new Promise(async (resolve) => {
+        var timeOut = setTimeout(() => {
+            resolve("");
+        }, 10000);
+    });
+};
