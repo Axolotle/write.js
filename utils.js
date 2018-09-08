@@ -62,6 +62,32 @@ function shuffle(array) {
     return array;
 }
 
+function splitText(txt, width, startAt=0) {
+    if (!Array.isArray(txt)) txt = txt.split("\n");
+
+    var newTxt = [];
+    var index = startAt - 1;
+    txt.forEach(line => {
+        var newLine = [];
+        line.split(" ").forEach(word => {
+            index += 1 + word.length;
+
+            if (index <= width) {
+                newLine.push(word);
+            } else {
+                newTxt.push(newLine.join(" "));
+                newLine = [word];
+                index = -1;
+            }
+        });
+
+        newTxt.push(newLine.join(" "));
+        index = -1;
+    });
+
+    return newTxt;
+}
+
 function FormatJSON(x, y, marginX, marginY) {
     this.x = x;
     this.y = y;
