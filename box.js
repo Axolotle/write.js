@@ -410,6 +410,21 @@ Box.prototype.insertOnLine = function(l, i, txt, length) {
     this.lines[l].innerHTML = newLine;
 
 };
+Box.prototype.safePrint = function(l, i, txt, insert) {
+    i += this.marginX;
+    l += this.marginY;
+    // Gets previous line content
+    var prevTxt = this.lines[l].textContent;
+
+    // If insert is true don't overwrite the text
+    var overwrite = insert ? 0 : txt.length;
+
+    // Rewrites the line with new content
+    var newLine = prevTxt.substr(0, i) + txt + prevTxt.substr(i + overwrite);
+
+    this.lines[l].textContent = newLine;
+
+};
 Box.prototype.addTags = function(tag) {
     /* Adds any tag to the box's writing zone */
 
