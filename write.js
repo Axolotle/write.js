@@ -1274,36 +1274,101 @@ function Talker(texts) {
         part.text = splitText(part.text, w);
         part.responses.map(response => {
             if (response.hasOwnProperty("text")) {
-                response.text = splitText(part.text, w);
+                response.text = splitText(response.text, w);
             }
             return response;
         });
         if (part.failure.hasOwnProperty("text")) {
-            part.failure = splitText(part.failure.text, w);
+            part.failure.text = splitText(part.failure.text, w);
         }
         if (part.nothing && part.nothing.hasOwnProperty("text")) {
-            part.nothing = splitText(part.nothing.text, w);
+            part.nothing.text = splitText(part.nothing.text, w);
         }
         return part;
     });
 }
 Talker.prototype.init = async function (box) {
+    this.box = box;
     for (var i = 0, len = this.content.length; i < len; i++) {
         let content = this.content[i];
+        let len = content.text.length;
         await sleep(1000);
-        this.displayText(box, content.text);
-        var response = await this.respond();
+        this.displayText(content.text, 0);
+
+        var response = await this.response();
         console.log(response);
-        box.cleanLines();
+
+        if (response === "") {
+            this.displayText(["- ..."], len + 1);
+            if (content.nothing && content.nothing.hasOwnProperty("text")) {
+                await sleep(1000);
+                this.displayText(content.nothing.text, len + 3);
+            }
+        } else {
+            let formatedResponse = splitText("- " + response, this.box.x - this.box.marginX * 2)
+            this.displayText(formatedResponse, len + 1);
+            var result = this.checkResponse(response, content.responses, content.failure);
+            console.log(result);
+            if (result.effect) {
+                console.log("EFFECT", result.effect);
+                i = -1;
+            }
+            if (result.text) {
+                this.displayText(result.text, len + formatedResponse.length + 2);
+                await sleep(3000);
+            }
+        }
+
+        this.box.cleanLines();
     }
 };
-Talker.prototype.displayText = function(box, txt) {
-    txt.forEach((line, i) => box.printOnLine(i, 0, line));
+Talker.prototype.displayText = function(txt, startY) {
+    txt.forEach((line, i) => this.box.safePrint(i + startY, 0, line));
 };
-Talker.prototype.respond = function () {
+Talker.prototype.response = function () {
     return new Promise(async (resolve) => {
+        var input = new Input();
+        input.init();
         var timeOut = setTimeout(() => {
             resolve("");
-        }, 10000);
+        }, 30000);
+
+        var content = await input.response();
+        clearTimeout(timeOut);
+        resolve(content);
+    });
+};
+Talker.prototype.checkResponse = function (response, possibilities, failure) {
+    for (var i = 0, posLen = possibilities.length; i < posLen; i++) {
+        let values = possibilities[i].values;
+        for (var j = 0, valLen = values.length; j < valLen; j++) {
+            if (response.includes(values[j])) {
+                console.log(response, values[j]);
+                return possibilities[i];
+            }
+        }
+    }
+    return failure;
+};
+
+function Input() {
+    this.elem = document.createElement("input");
+}
+Input.prototype.init = function () {
+    document.getElementsByTagName("body")[0].appendChild(this.elem);
+    this.elem.focus();
+};
+Input.prototype.response = function () {
+    return new Promise(async (resolve) => {
+        const _this = this;
+        function checkEnter(e) {
+            const key = e.key || e.keyCode;
+            if (["Enter", 13].includes(key)) {
+                resolve(_this.elem.value);
+                window.removeEventListener("keyup", checkEnter);
+                _this.elem.remove();
+            }
+        }
+        window.addEventListener("keyup", checkEnter)
     });
 };
