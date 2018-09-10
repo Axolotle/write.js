@@ -1337,15 +1337,27 @@ Talker.prototype.getWaitValue = function (text) {
 };
 Talker.prototype.response = function (wait) {
     return new Promise(async (resolve) => {
-        var input = new Input();
-        input.init();
+        function checkEnter(e) {
+            const key = e.key || e.keyCode;
+            if (["Enter", 13].includes(key)) {
+                clearTimeout(timeOut);
+                window.removeEventListener("keyup", checkEnter);
+                input.parentNode.removeChild(input);
+                resolve(input.value);
+            }
+        }
+
+        var input = document.createElement("input");
+        document.getElementsByTagName("body")[0].appendChild(input);
+        input.focus();
+
+        window.addEventListener("keyup", checkEnter);
+
         var timeOut = setTimeout(() => {
+            window.removeEventListener("keyup", checkEnter);
+            input.parentNode.removeChild(input);
             resolve("");
         }, wait + 20000);
-
-        var content = await input.response();
-        clearTimeout(timeOut);
-        resolve(content);
     });
 };
 Talker.prototype.checkResponse = function (response, possibilities, failure) {
@@ -1353,32 +1365,9 @@ Talker.prototype.checkResponse = function (response, possibilities, failure) {
         let values = possibilities[i].values;
         for (var j = 0, valLen = values.length; j < valLen; j++) {
             if (response.includes(values[j])) {
-                console.log(response, values[j]);
                 return possibilities[i];
             }
         }
     }
     return failure;
-};
-
-function Input() {
-    this.elem = document.createElement("input");
-}
-Input.prototype.init = function () {
-    document.getElementsByTagName("body")[0].appendChild(this.elem);
-    this.elem.focus();
-};
-Input.prototype.response = function () {
-    return new Promise(async (resolve) => {
-        const _this = this;
-        function checkEnter(e) {
-            const key = e.key || e.keyCode;
-            if (["Enter", 13].includes(key)) {
-                resolve(_this.elem.value);
-                window.removeEventListener("keyup", checkEnter);
-                _this.elem.parentNode.removeChild(_this.elem);
-            }
-        }
-        window.addEventListener("keyup", checkEnter)
-    });
 };
