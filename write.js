@@ -1295,43 +1295,53 @@ Talker.prototype.init = async function (box) {
         await sleep(1000);
         this.displayText(content.text, 0);
 
-        var response = await this.response();
-        console.log(response);
+        var response = await this.response(this.getWaitValue(content.text));
 
-        if (response === "") {
+        if (response.trim() === "") {
             this.displayText(["- ..."], len + 1);
-            if (content.nothing && content.nothing.hasOwnProperty("text")) {
-                await sleep(1000);
-                this.displayText(content.nothing.text, len + 3);
+            await sleep(1000);
+
+            if (content.nothing) {
+                if (content.nothing.text) {
+                    this.displayText(content.nothing.text, len + 3);
+                    await sleep(this.getWaitValue(content.nothing.text));
+                }
+                if (content.nothing.effect) {
+                    i = -1;
+                }
             }
         } else {
             let formatedResponse = splitText("- " + response, this.box.x - this.box.marginX * 2)
             this.displayText(formatedResponse, len + 1);
             var result = this.checkResponse(response, content.responses, content.failure);
-            console.log(result);
+            var wait = 2000;
+
             if (result.effect) {
-                console.log("EFFECT", result.effect);
                 i = -1;
             }
             if (result.text) {
                 this.displayText(result.text, len + formatedResponse.length + 2);
-                await sleep(3000);
+                wait = this.getWaitValue(result.text);
             }
+            await sleep(wait);
         }
 
         this.box.cleanLines();
     }
 };
 Talker.prototype.displayText = function(txt, startY) {
-    txt.forEach((line, i) => this.box.safePrint(i + startY, 0, line));
+    txt.forEach((line, i) => this.box.safePrint(i + startY + 1, 0, line));
 };
-Talker.prototype.response = function () {
+Talker.prototype.getWaitValue = function (text) {
+    return text.reduce((prev, line) => prev + line.length, 0) * 50;
+};
+Talker.prototype.response = function (wait) {
     return new Promise(async (resolve) => {
         var input = new Input();
         input.init();
         var timeOut = setTimeout(() => {
             resolve("");
-        }, 30000);
+        }, wait + 20000);
 
         var content = await input.response();
         clearTimeout(timeOut);
@@ -1366,7 +1376,7 @@ Input.prototype.response = function () {
             if (["Enter", 13].includes(key)) {
                 resolve(_this.elem.value);
                 window.removeEventListener("keyup", checkEnter);
-                _this.elem.remove();
+                _this.elem.parentNode.removeChild(_this.elem);
             }
         }
         window.addEventListener("keyup", checkEnter)
