@@ -1288,6 +1288,8 @@ function Talker(texts) {
     });
 }
 Talker.prototype.init = async function (box) {
+    return new Promise(async resolve => {
+
     this.box = box;
     for (var i = 0, len = this.content.length; i < len; i++) {
         let content = this.content[i];
@@ -1328,6 +1330,8 @@ Talker.prototype.init = async function (box) {
 
         this.box.cleanLines();
     }
+    resolve();
+    });
 };
 Talker.prototype.displayText = function(txt, startY) {
     txt.forEach((line, i) => this.box.safePrint(i + startY + 1, 0, line));
