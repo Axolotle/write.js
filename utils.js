@@ -88,6 +88,19 @@ function splitText(txt, width, startAt=0) {
     return newTxt;
 }
 
+function nextFrame() {
+    return new Promise(resolve => {
+        requestAnimationFrame(resolve)
+    })
+}
+
+async function animDelay(value) {
+    const startTime = performance.now();
+    while (performance.now() - startTime < value) {
+        await nextFrame();
+    }
+}
+
 function FormatJSON(x, y, marginX, marginY) {
     this.x = x;
     this.y = y;
