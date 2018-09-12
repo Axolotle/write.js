@@ -1270,23 +1270,6 @@ Viewfinder.prototype.deactivate = function(skin) {
 
 function Talker(box, texts) {
     this.content = texts;
-    // this.content = texts.map(part => {
-    //     let w = box.x - box.marginX * 2;
-    //     part.text = splitText(part.text, w);
-    //     part.responses.map(response => {
-    //         if (response.hasOwnProperty("text")) {
-    //             response.text = splitText(response.text, w);
-    //         }
-    //         return response;
-    //     });
-    //     if (part.failure.hasOwnProperty("text")) {
-    //         part.failure.text = splitText(part.failure.text, w);
-    //     }
-    //     if (part.nothing && part.nothing.hasOwnProperty("text")) {
-    //         part.nothing.text = splitText(part.nothing.text, w);
-    //     }
-    //     return part;
-    // });
     this.box = box;
     this.lastSpeaker = "program";
     this.firstSentence = true;
@@ -1301,7 +1284,7 @@ Talker.prototype.init = async function () {
         await this.animateText(txt, scrollValue);
 
         var response = await this.response(20000);
-        if (response.trim() === "") {
+        if (response === "") {
             scrollValue = this.scroll(["— …"]);
             this.displayText(["— …"], scrollValue);
             this.lastSpeaker = "reader";
@@ -1419,7 +1402,7 @@ Talker.prototype.response = function (wait) {
                 clearTimeout(timeOut);
                 window.removeEventListener("keyup", checkEnter);
                 input.parentNode.removeChild(input);
-                resolve(input.value);
+                resolve(input.value.trim());
             }
         }
 
@@ -1431,16 +1414,18 @@ Talker.prototype.response = function (wait) {
 
         var timeOut = setTimeout(() => {
             window.removeEventListener("keyup", checkEnter);
+            let rep = input.value.trim();
+            if (rep === "") resolve(rep);
+            else resolve(rep + "…");
             input.parentNode.removeChild(input);
-            resolve("");
-        }, wait + 20000);
+        }, wait);
     });
 };
 Talker.prototype.checkResponse = function (response, possibilities, failure) {
     for (var i = 0, posLen = possibilities.length; i < posLen; i++) {
         let values = possibilities[i].values;
         for (var j = 0, valLen = values.length; j < valLen; j++) {
-            if (response.includes(values[j])) {
+            if (response.toLowerCase().includes(values[j])) {
                 return possibilities[i];
             }
         }
