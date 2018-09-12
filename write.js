@@ -1269,68 +1269,100 @@ Viewfinder.prototype.deactivate = function(skin) {
 
 
 function Talker(box, texts) {
-    this.content = texts.map(part => {
-        let w = box.x - box.marginX * 2;
-        part.text = splitText(part.text, w);
-        part.responses.map(response => {
-            if (response.hasOwnProperty("text")) {
-                response.text = splitText(response.text, w);
-            }
-            return response;
-        });
-        if (part.failure.hasOwnProperty("text")) {
-            part.failure.text = splitText(part.failure.text, w);
-        }
-        if (part.nothing && part.nothing.hasOwnProperty("text")) {
-            part.nothing.text = splitText(part.nothing.text, w);
-        }
-        return part;
-    });
+    this.content = texts;
+    // this.content = texts.map(part => {
+    //     let w = box.x - box.marginX * 2;
+    //     part.text = splitText(part.text, w);
+    //     part.responses.map(response => {
+    //         if (response.hasOwnProperty("text")) {
+    //             response.text = splitText(response.text, w);
+    //         }
+    //         return response;
+    //     });
+    //     if (part.failure.hasOwnProperty("text")) {
+    //         part.failure.text = splitText(part.failure.text, w);
+    //     }
+    //     if (part.nothing && part.nothing.hasOwnProperty("text")) {
+    //         part.nothing.text = splitText(part.nothing.text, w);
+    //     }
+    //     return part;
+    // });
     this.box = box;
+    this.lastSpeaker = "program";
+    this.firstSentence = true;
+    this.displayedText = [];
 }
 Talker.prototype.init = async function () {
-    return new Promise(async resolve => {
+    var txt, scrollValue;
     for (var i = 0, len = this.content.length; i < len; i++) {
         let content = this.content[i];
-        let len = content.text.length;
-        await sleep(1000);
-        this.animateText(content.text, 1);
+        txt = this.prefixed(content.text, "program");
+        scrollValue = this.scroll(txt);
+        await this.animateText(txt, scrollValue);
 
-        var response = await this.response(this.getWaitValue(content.text));
-
+        var response = await this.response(20000);
         if (response.trim() === "") {
-            this.displayText(["— ..."], len + 1);
-            await sleep(1000);
+            scrollValue = this.scroll(["— …"]);
+            this.displayText(["— …"], scrollValue);
+            this.lastSpeaker = "reader";
+            await sleep(1500);
 
             if (content.nothing) {
                 if (content.nothing.text) {
-                    this.displayText(content.nothing.text, len + 3);
-                    await sleep(this.getWaitValue(content.nothing.text));
+                    txt = this.prefixed(content.nothing.text, "program");
+                    scrollValue = this.scroll(txt);
+                    await this.animateText(txt, scrollValue);
+                    await sleep(1500);
                 }
                 if (content.nothing.effect) {
                     i = -1;
                 }
             }
         } else {
-            let formatedResponse = splitText("— " + response, this.box.x - this.box.marginX * 2)
-            this.displayText(formatedResponse, len + 1);
             var result = this.checkResponse(response, content.responses, content.failure);
-            var wait = 2000;
+            txt = this.prefixed(response, "reader");
+            scrollValue = this.scroll(txt);
+            this.displayText(txt, scrollValue);
+            await sleep(1500);
 
             if (result.effect) {
                 i = -1;
             }
             if (result.text) {
-                this.displayText(result.text, len + formatedResponse.length + 2);
-                wait = this.getWaitValue(result.text);
+                txt = this.prefixed(result.text, "program");
+                scrollValue = this.scroll(txt);
+                await this.animateText(txt, scrollValue);
+                await sleep(1500);
             }
-            await sleep(wait);
         }
 
-        this.box.cleanLines();
     }
-    resolve();
-    });
+};
+Talker.prototype.prefixed = function(txt, speaker) {
+    let prefix = undefined;
+    if (this.firstSentence) {
+        prefix = "« ";
+        this.firstSentence = false;
+    } else if (this.lastSpeaker !== speaker) {
+        prefix = "— ";
+        this.lastSpeaker = speaker;
+    } else {
+        prefix = "";
+    }
+    if (Array.isArray(txt)) txt = pick(txt);
+    return splitText(prefix + txt, this.box.x - this.box.marginX * 2)
+};
+Talker.prototype.scroll = function(nextText) {
+    var maxHeight = this.box.y - this.box.marginY * 2 - 2 ;
+    var nextHeight = this.displayedText.length + nextText.length;
+    if (nextHeight > maxHeight) {
+        this.displayedText = this.displayedText.splice(nextHeight - maxHeight);
+        this.box.cleanLines();
+        this.displayText(this.displayedText, 0);
+    }
+    let displayLen = this.displayedText.length;
+    this.displayedText = [...this.displayedText, ...nextText, " "];
+    return displayLen;
 };
 Talker.prototype.displayText = function(txt, startY) {
     txt.forEach((line, i) => this.box.safePrint(i + startY + 1, 0, line));
@@ -1340,13 +1372,13 @@ Talker.prototype.animateText = async function(txt, startY) {
         if (sentence === "") return " ";
         return sentence.split("");
     });
-    var speed = 70;
+    var speed = 40;
 
     for (var l = 0, txtLen = txt.length; l < txtLen; l++) {
         let line = txt[l];
         for (var g = 0, lineLen = line.length; g < lineLen; g++) {
+            this.box.printOnLine(l + startY + 1, g, line[g]);
             await sleep(speed);
-            this.box.printOnLine(l + startY, g, line[g]);
         }
     }
 
