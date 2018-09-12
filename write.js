@@ -1294,12 +1294,12 @@ Talker.prototype.init = async function () {
         let content = this.content[i];
         let len = content.text.length;
         await sleep(1000);
-        this.animateText(content.text, 0);
+        this.animateText(content.text, 1);
 
         var response = await this.response(this.getWaitValue(content.text));
 
         if (response.trim() === "") {
-            this.displayText(["- ..."], len + 1);
+            this.displayText(["— ..."], len + 1);
             await sleep(1000);
 
             if (content.nothing) {
@@ -1312,7 +1312,7 @@ Talker.prototype.init = async function () {
                 }
             }
         } else {
-            let formatedResponse = splitText("- " + response, this.box.x - this.box.marginX * 2)
+            let formatedResponse = splitText("— " + response, this.box.x - this.box.marginX * 2)
             this.displayText(formatedResponse, len + 1);
             var result = this.checkResponse(response, content.responses, content.failure);
             var wait = 2000;
@@ -1337,90 +1337,43 @@ Talker.prototype.displayText = function(txt, startY) {
 };
 Talker.prototype.animateText = async function(txt, startY) {
     txt = txt.map((sentence) => {
-        if (sentence === "") return "";
+        if (sentence === "") return " ";
         return sentence.split("");
     });
-    var speed = 25;
+    var speed = 70;
 
-
-    // for (var l = 0, txtLen = txt.length; l < txtLen; l++) {
-    //     let line = txt[l];
-    //     for (var g = 0, lineLen = line.length; g < lineLen; g++) {
-    //         st = performance.now();
-    //         await sleep(speed);
-    //         console.log(performance.now() - st);
-    //         this.box.printOnLine(l + 1, g, line[g]);
-    //
-    //     }
-    // }
-
-    // var i = 0;
-    // var l = 0;
-    // async function writing() {
-    //     console.log(performance.now() - st);
-    //     this.box.printOnLine(l + startY, i, txt[l][i] || "");
-    //     if (i < txt[l].length - 1) {
-    //         i += 1;
-    //     } else if (l < txt.length - 1) {
-    //         i = 0;
-    //         l += 1;
-    //     } else {
-    //         return;
-    //     }
-    //     st = performance.now();
-    //     await sleep(speed);
-    //     requestAnimationFrame(writing);
-    // }
-    // st = performance.now();
-    // requestAnimationFrame(writing);
-
-    function writing(time) {
-        var reqAnim = requestAnimationFrame(writing);
-        var passed = time - start;
-        start = time;
-
-        stepPassed += passed;
-        if (stepPassed >= speed) {
-            var glyphNumber = Math.floor(stepPassed / speed);
-            console.log(glyphNumber);
-            stepPassed -= glyphNumber * speed;
-
-            for (var z = 0; z < glyphNumber; z++) {
-                if (txt[l][++i] === undefined) {
-                    if (txt[++l] === undefined) {
-                        let textLen = txt.reduce((acc, line) => {
-                            return acc + line.length;
-                        }, 0)
-                        console.log(time - realStart, textLen, (time - realStart) / speed);
-                        return cancelAnimationFrame(reqAnim);
-                    }
-                    else i = 0;
-                }
-                this.box.printOnLine(l + startY, i, txt[l][i]);
-            }
-        } else {
-            stepPassed += passed;
+    for (var l = 0, txtLen = txt.length; l < txtLen; l++) {
+        let line = txt[l];
+        for (var g = 0, lineLen = line.length; g < lineLen; g++) {
+            await sleep(speed);
+            this.box.printOnLine(l + startY, g, line[g]);
         }
-
-        // this.box.printOnLine(l + startY, i, txt[l][i] || "");
-        // if (i < txt[l].length - 1) {
-        //     i += 1;
-        // } else if (l < txt.length - 1) {
-        //     i = 0;
-        //     l += 1;
-        // } else {
-        //     return;
-        // }
     }
 
-    var start = performance.now();
-    var realStart = start;
-
-    var stepPassed = 0;
-    var i = -1;
-    var l = 0;
-
-    requestAnimationFrame(writing);
+    // function writing(time) {
+    //     var raf = requestAnimationFrame(writing);
+    //     var passed = time - start;
+    //     start = time;
+    //
+    //     stepPassed += passed;
+    //     if (stepPassed >= speed) {
+    //         var glyphNumber = Math.floor(stepPassed / speed);
+    //         stepPassed -= glyphNumber * speed;
+    //         for (var z = 0; z < glyphNumber; z++) {
+    //             if (txt[l][++i] === undefined) {
+    //                 if (txt[++l] === undefined) return cancelAnimationFrame(raf);
+    //                 else i = 0;
+    //             }
+    //             this.box.printOnLine(l + startY, i, txt[l][i]);
+    //         }
+    //     }
+    // }
+    //
+    // var start = performance.now();
+    // var stepPassed = 0;
+    // var i = -1;
+    // var l = 0;
+    // requestAnimationFrame(writing);
 
 };
 Talker.prototype.getWaitValue = function (text) {
