@@ -32,7 +32,7 @@ class Display {
         this.screen = getWindowDimensions(this.glyph, this.margin);
 
         try {
-            this.size = defineSize(this.screen,this.glyph, options);
+            this.size = defineSize(this.screen, this.glyph, options);
         } catch (error) {
             throw error;
         }
@@ -41,6 +41,32 @@ class Display {
         return this;
     }
 
+    displaySelf() {
+        var box = createBox(this.size);
+        var fragment = document.createDocumentFragment();
+        var div = document.getElementById(this.nodeName);
+
+        for (const line of box) {
+            let elem = document.createElement("p");
+            elem.textContent = line;
+            this.elems.push(elem);
+            fragment.appendChild(elem);
+        }
+        div.appendChild(fragment);
+    }
+}
+
+function createBox({width, height}) {
+    var lines = '─'.repeat(width - 2);
+    var spaces = `│${' '.repeat(width - 2)}│`;
+    var box = [];
+
+    for (let n = 0; n < height; n++) {
+        if (n === 0) box.push(`┌${lines}┐`);
+        else if (n === height - 1) box.push(`└${lines}┘`);
+        else box.push(spaces);
+    }
+    return box;
 }
 
 export default Display;
