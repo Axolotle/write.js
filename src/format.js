@@ -33,7 +33,7 @@ export function split(txt, width, startAt=0) {
             } else {
                 newTxt.push(newLine.join(" "));
                 newLine = [word];
-                index = -1;
+                index = word.length;
             }
         });
 
