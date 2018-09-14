@@ -41,18 +41,38 @@ class Display {
         return this;
     }
 
-    displaySelf() {
+    /**
+     * Append a clean box to the node element.
+     */
+    display() {
         var box = createBox(this.size);
         var fragment = document.createDocumentFragment();
         var div = document.getElementById(this.nodeName);
 
         for (const line of box) {
-            let elem = document.createElement("p");
+            let elem = document.createElement('p');
             elem.textContent = line;
             this.elems.push(elem);
             fragment.appendChild(elem);
         }
         div.appendChild(fragment);
+    }
+
+    /**
+     * Print some string(s) on the display.
+     * @param {(string|string[])} txt - a single string with or without '\n' or an array of strings.
+     * @param {number} [startY=0] - Y coordinate at witch the print has to start.
+     * @param {number} [startX=0] - X coordinate at witch the print has to start.
+     */
+    print(txt, startY = 0, startX = 0) {
+        if (!Array.isArray(txt)) txt = [txt];
+        for (let line of txt) {
+            let prevTxt = this.elems[startY + this.padding.y].textContent;
+            let newLine = prevTxt.slice(0, startX + this.padding.x) + line + prevTxt.slice(startX + this.padding.x + line.length);
+            this.elems[startY + this.padding.y].textContent = newLine;
+            if (startX !== 0) startX = 0;
+            startY++;
+        }
     }
 }
 
