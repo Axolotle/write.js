@@ -8,27 +8,28 @@ import { longestWord } from '../format.js';
  */
 
 
-
-function fromText(txt, width, padding, max) {
-    var height = padding.y;
-    var actualWidth = padding.x;
+function fromText(txt, width, padd, max) {
+    var height = padd.height;
+    var actualWidth = padd.width;
 
     for (const words of txt) {
-        actualWidth = padding.x;
+        actualWidth = padd.width;
         height++;
         for (const word of words) {
             if (height > max.height) {
                 if (width <= max.width) {
-                    return fromText(words, width + 1, padding, max);
+                    return fromText(txt, width + 1, padd, max);
                 } else {
                     throw error;
                 }
             }
 
             let wordLen = word.length;
-            let nextWidth = actualWidth === padding.x ? wordLen : actualWidth + 1 + wordLen;
+            let nextWidth = actualWidth + wordLen;
+            // add a space length if
+            if (actualWidth === padd.width) nextWidth += 1;
 
-            if (nextWidth <= max.width) {
+            if (nextWidth <= width) {
                 actualWidth = nextWidth;
             } else {
                 actualWidth = wordLen;
@@ -102,14 +103,17 @@ export function defineSize(
     } = {}
 ) {
     const error = new Error('Screen too small');
-    const padd = {x: padding.x * 2, y: padding.y * 2};
+    const padd = {
+        width: padding.x * 2,
+        height: padding.y * 2,
+    };
     const max = {
         width: maxWidth < screen.width ? maxWidth : screen.width,
         height: maxHeight < screen.height ? maxHeight : screen.height,
     };
     const min = {
-        width: minWidth < padd.x ? padd.x : minWidth,
-        height: minHeight < padd.y ? padd.y : minHeight,
+        width: minWidth < padd.width ? padd.width : minWidth,
+        height: minHeight < padd.height ? padd.height : minHeight,
     };
     const evenOdd = {
         width: !aspect.hasOwnProperty('width') ? undefined : aspect.width,
