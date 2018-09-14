@@ -36,7 +36,6 @@ export function split(txt, width, startAt=0) {
                 index = word.length;
             }
         });
-
         newTxt.push(newLine.join(" "));
         index = -1;
     });
@@ -74,7 +73,6 @@ export function extractOptions(txt) {
 
 export function longestWord(words) {
     return words.reduce((a, b) => {
-        if (b.length > a.length) return b;
-        return a;
+        return b.length > a.length ? b : a;
     });
 }

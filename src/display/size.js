@@ -1,4 +1,4 @@
-import { longestWord } from '../format.js';
+import { split, longestWord } from '../format.js';
 /**
  * Module for defining display size.
  * @module writejs/utils
@@ -9,35 +9,31 @@ import { longestWord } from '../format.js';
 
 
 function fromText(txt, width, padd, max) {
-    var height = padd.height;
-    var actualWidth = padd.width;
+    var height = 0;
+    var actualWidth = -1;
 
     for (const words of txt) {
-        actualWidth = padd.width;
-        height++;
         for (const word of words) {
-            if (height > max.height) {
-                if (width <= max.width) {
+            if (height > max.height - padd.height) {
+                if (width < max.width - padd.width) {
                     return fromText(txt, width + 1, padd, max);
                 } else {
                     throw error;
                 }
             }
 
-            let wordLen = word.length;
-            let nextWidth = actualWidth + wordLen;
-            // add a space length if
-            if (actualWidth === padd.width) nextWidth += 1;
-
-            if (nextWidth <= width) {
-                actualWidth = nextWidth;
-            } else {
-                actualWidth = wordLen;
-                height++;
+            actualWidth += 1 + word.length;
+            if (actualWidth > width) {
+                height += 1;
+                actualWidth = word.length;
             }
         }
+        if (actualWidth !== -1) {
+            height += 1;
+            actualWidth = -1;
+        }
     }
-    return {width: width, height: height};
+    return {width: width + padd.width, height: height + padd.height};
 }
 
 function fromRatio(ratio, height) {
