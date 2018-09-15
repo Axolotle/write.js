@@ -63,6 +63,16 @@ class Display {
     }
 
     /**
+     * Erase all display content
+     */
+    reset() {
+        var box = createBox(this.totalWidth, this.totalHeight);
+        this.elems.forEach((elem, i) => {
+            elem.textContent = box[i];
+        });
+    }
+
+    /**
      * Print some string(s) on the display.
      * @param {(string|string[])} txt - a single string with or without '\n' or an array of strings.
      * @param {number} [startY=0] - Y coordinate at witch the print has to start.
