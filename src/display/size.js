@@ -18,7 +18,7 @@ function fromText(txt, width, padd, max) {
                 if (width < max.width - padd.width) {
                     return fromText(txt, width + 1, padd, max);
                 } else {
-                    throw error;
+                    throw new Error('Screen too small');
                 }
             }
 
@@ -98,7 +98,6 @@ export function defineSize(
         ratio,
     } = {}
 ) {
-    const error = new Error('Screen too small');
     const padd = {
         width: padding.x * 2,
         height: padding.y * 2,
@@ -123,7 +122,7 @@ export function defineSize(
         txt = txt.map(line => line.split(' '));
         let longestLen = longestWord(txt.map(words => longestWord(words))).length;
 
-        if (longestLen > maxWidth) throw error;
+        if (longestLen > maxWidth) throw new Error('Screen too small');
 
         if (longestLen > minWidth) return fromText(txt, longestLen, padd, max);
         else return fromText(txt, minWidth, padd, max);
