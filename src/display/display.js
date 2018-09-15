@@ -63,13 +63,24 @@ class Display {
     }
 
     /**
-     * Erase all display content
+     * Erase all display content by printing a new empty box
      */
     reset() {
         var box = createBox(this.totalWidth, this.totalHeight);
         this.elems.forEach((elem, i) => {
             elem.textContent = box[i];
         });
+    }
+
+    /**
+     * Remove display content from document
+     */
+    remove() {
+        var display = document.getElementById(this.nodeName);
+        while (display.lastChild) {
+            display.lastChild.remove();
+        }
+        this.elems = [];
     }
 
     /**
