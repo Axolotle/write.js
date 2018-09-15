@@ -19,6 +19,10 @@ export function has(obj, prop) {
     return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
+export function sleep(ms) {
+    return new Promise (resolve => setTimeout(resolve, ms));
+}
+
 function readJSONFile(url) {
     return new Promise((resolve, reject) => {
         var rawFile = new XMLHttpRequest();
