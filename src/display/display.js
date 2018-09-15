@@ -16,7 +16,6 @@ class Display {
 
         this.margin = {x: 0, y: 0};
         this.padding = {x: 0, y: 0};
-        this.size = {width: 0, height: 0};
 
         if (options) this.init(options);
     }
@@ -32,7 +31,12 @@ class Display {
         this.screen = getWindowDimensions(this.glyph, this.margin);
 
         try {
-            this.size = defineSize(this.screen, this.glyph, options);
+            ({
+                width: this.width,
+                height: this.height
+            } = defineSize(this.screen, this.glyph, options));
+            this.totalWidth = this.width + this.padding.x * 2;
+            this.totalHeight = this.height + this.padding.y * 2;
         } catch (error) {
             throw error;
         }
@@ -45,7 +49,7 @@ class Display {
      * Append a clean box to the node element.
      */
     display() {
-        var box = createBox(this.size);
+        var box = createBox(this.totalWidth, this.totalHeight);
         var fragment = document.createDocumentFragment();
         var div = document.getElementById(this.nodeName);
 
@@ -76,7 +80,7 @@ class Display {
     }
 }
 
-function createBox({width, height}) {
+function createBox(width, height) {
     var lines = '─'.repeat(width - 2);
     var spaces = `│${' '.repeat(width - 2)}│`;
     var box = [];

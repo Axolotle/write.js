@@ -33,7 +33,7 @@ function fromText(txt, width, padd, max) {
             actualWidth = -1;
         }
     }
-    return {width: width + padd.width, height: height + padd.height};
+    return {width: width, height: height};
 }
 
 function fromRatio(ratio, height) {
