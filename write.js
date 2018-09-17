@@ -1274,16 +1274,23 @@ function Talker(box, texts) {
     this.lastSpeaker = "program";
     this.firstSentence = true;
     this.displayedText = [];
+    this.stop = false;
 }
 Talker.prototype.init = async function () {
     var txt, scrollValue;
+
+    window.addEventListener("stop", () => {
+        this.stop = true;
+    }, {once: true});
+
     for (var i = 0, len = this.content.length; i < len; i++) {
         let content = this.content[i];
         txt = this.prefixed(content.text, "program");
         scrollValue = this.scroll(txt);
         await this.animateText(txt, scrollValue);
 
-        var response = await this.response(20000);
+        if (this.stop) return Promise.reject("User triggered a stop event");
+        var response = await this.response(25000);
         if (response === "") {
             scrollValue = this.scroll(["— …"]);
             this.displayText(["— …"], scrollValue);
@@ -1356,12 +1363,18 @@ Talker.prototype.animateText = async function(txt, startY) {
         return sentence.split("");
     });
     var speed = 40;
+    var pausedGlyphs = ["?", "!", ".", "…"];
 
     for (var l = 0, txtLen = txt.length; l < txtLen; l++) {
         let line = txt[l];
         for (var g = 0, lineLen = line.length; g < lineLen; g++) {
+            if (this.stop) return Promise.reject("User triggered a stop event");
             this.box.printOnLine(l + startY + 1, g, line[g]);
-            await sleep(speed);
+            let extra = 0;
+            for (let pausedGlyph of pausedGlyphs) {
+                if (line[g].includes(pausedGlyph)) extra = 500;
+            }
+            await sleep(speed + extra);
         }
     }
 
@@ -1395,16 +1408,26 @@ Talker.prototype.getWaitValue = function (text) {
     return text.reduce((prev, line) => prev + line.length, 0) * 50;
 };
 Talker.prototype.response = function (wait) {
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve, reject) => {
         function checkEnter(e) {
             const key = e.key || e.keyCode;
             if (["Enter", 13].includes(key)) {
                 clearTimeout(timeOut);
                 window.removeEventListener("keyup", checkEnter);
+                window.removeEventListener("stop", stop);
                 input.parentNode.removeChild(input);
                 resolve(input.value.trim());
             }
         }
+
+        function stop() {
+            clearTimeout(timeOut);
+            window.removeEventListener("keyup", checkEnter);
+            input.parentNode.removeChild(input);
+            reject("User triggered a stop event");
+        }
+
+        window.addEventListener("stop", stop, {once: true});
 
         var input = document.createElement("input");
         document.getElementsByTagName("body")[0].appendChild(input);
@@ -1414,6 +1437,7 @@ Talker.prototype.response = function (wait) {
 
         var timeOut = setTimeout(() => {
             window.removeEventListener("keyup", checkEnter);
+            window.removeEventListener("stop", stop);
             let rep = input.value.trim();
             if (rep === "") resolve(rep);
             else resolve(rep + "…");
