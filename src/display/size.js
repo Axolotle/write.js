@@ -1,4 +1,6 @@
 import { split, longestWord } from '../format.js';
+import { has } from '../utils.js';
+
 /**
  * Module for defining display size.
  * @module writejs/utils
@@ -7,16 +9,35 @@ import { split, longestWord } from '../format.js';
  * @version 1.0
  */
 
+function OddOrEven(n) {
+    return n % 2 === 0 ? "even" : "odd";
+}
 
-function fromText(txt, width, padd, max) {
+function getOddOrEven(n, aspect, adder) {
+    if (OddOrEven(n) !== aspect) return n + adder;
+    return n;
+}
+
+function fromMax(width, height, evenOdd) {
+    return {
+        width: evenOdd.width === undefined
+            ? width
+            : getOddOrEven(width, evenOdd.width, -1),
+        height: evenOdd.height === undefined
+            ? height
+            : getOddOrEven(height, evenOdd.height, -1),
+    }
+}
+
+function fromText(txt, width, max) {
     var height = 0;
     var actualWidth = -1;
 
     for (const words of txt) {
         for (const word of words) {
-            if (height > max.height - padd.height) {
-                if (width < max.width - padd.width) {
-                    return fromText(txt, width + 1, padd, max);
+            if (height > max.height) {
+                if (width < max.width) {
+                    return fromText(txt, width + 1, max);
                 } else {
                     throw new Error('Screen too small');
                 }
@@ -36,14 +57,20 @@ function fromText(txt, width, padd, max) {
     return {width: width, height: height};
 }
 
-function fromRatio(ratio, height) {
-    var width = Math.round(height * ratio);
+function fromRatio(ratio, height, max, min, evenOdd) {
+    var {width, height} = fromMax(Math.round(height * ratio), height, evenOdd);
 
-    if (width <= max.width && width >= min.width && height <= max.height && y >= min.height) {
-        return {
-            width: evenOdd.width === undefined ? width : checkOddOrEven(width, evenOdd.width)
-        }
+    if (width <= max.width && width >= min.width && height <= max.height && height >= min.height) {
+        return {width: width, height: height};
     }
+
+    let nextHeight = evenOdd.height === undefined
+        ? height - 1
+        : getOddOrEven(height - 1, evenOdd.height, -1);
+    if (nextHeight >= min.height && width >= min.width) {
+        return fromRatio(ratio, nextHeight, max, min, evenOdd);
+    }
+    throw new Error('Screen too small');
 }
 
 /**
@@ -91,8 +118,8 @@ export function defineSize(
         padding = {x: 0, y:0},
         maxWidth = screen.width,
         maxHeight = screen.height,
-        minWidth = padding.x * 2,
-        minHeight = padding.y * 2,
+        minWidth = 1,
+        minHeight = 1,
         aspect = {},
         longestText,
         ratio,
@@ -103,19 +130,21 @@ export function defineSize(
         height: padding.y * 2,
     };
     const max = {
-        width: maxWidth < screen.width ? maxWidth : screen.width,
-        height: maxHeight < screen.height ? maxHeight : screen.height,
+        width: (maxWidth < screen.width ? maxWidth : screen.width) - padd.width,
+        height: (maxHeight < screen.height ? maxHeight : screen.height) - padd.height,
     };
     const min = {
-        width: minWidth < padd.width ? padd.width : minWidth,
-        height: minHeight < padd.height ? padd.height : minHeight,
+        width: minWidth > padd.width ? minWidth - padd.width : 1,
+        height: minHeight > padd.height ? minHeight - padd.height : 1,
     };
     const evenOdd = {
-        width: !aspect.hasOwnProperty('width') ? undefined : aspect.width,
-        height: !aspect.hasOwnProperty('height') ? undefined : aspect.height,
-    }
+        width: !has(aspect, 'width') ? undefined : aspect.width,
+        height: !has(aspect, 'height') ? undefined : aspect.height,
+    };
 
-    if (max.width < min.width || max.height < min.height) throw error;
+    if (max.width < min.width || max.height < min.height) {
+        throw new Error('Screen too small');
+    }
 
     if (longestText) {
         let txt = Array.isArray(longestText) ? longestText : longestText.split('\n');
@@ -124,8 +153,8 @@ export function defineSize(
 
         if (longestLen > maxWidth) throw new Error('Screen too small');
 
-        if (longestLen > minWidth) return fromText(txt, longestLen, padd, max);
-        else return fromText(txt, minWidth, padd, max);
+        if (longestLen > minWidth) return fromText(txt, longestLen, max);
+        else return fromText(txt, minWidth, max);
     }
 
     if (ratio) {
@@ -133,6 +162,8 @@ export function defineSize(
             throw new TypeError('"Ratio" property');
         }
         let combineRatio = (ratio[0] / ratio[1]) * (glyph.height / glyph.width);
-        return fromRatio(combineRatio, max.height);
+        return fromRatio(combineRatio, max.height, max, min, evenOdd);
     }
+
+    return fromMax(max.width, max.height, evenOdd);
 }
