@@ -8,7 +8,7 @@ class Display {
     /**
      * Creates an instance of Display.
      * @param {string} [nodeName='displayer'] - The DOM node's id in which the display will be append.
-     * @param {Object} [options] - if given, automatically initializes the display with these options, see {@link Displayer#init} for properties.
+     * @param {Object} [options] - if given, automatically initializes the display with these options, see {@link Display#init} for properties.
      */
     constructor(nodeName='display', options) {
         this.nodeName = nodeName;
@@ -21,7 +21,8 @@ class Display {
     }
 
     /**
-     * initialize the display.
+     * initialize the display.<br>
+     * Use the {@link Display#draw} or {@link Display#display} method to print the display on the window.
      * @param {Object} [options] - Options to initialize the display
      */
     init(options) {
@@ -51,7 +52,7 @@ class Display {
     display() {
         var box = createBox(this.totalWidth, this.totalHeight);
         var fragment = document.createDocumentFragment();
-        var div = document.getElementById(this.nodeName);
+        var node = document.getElementById(this.nodeName);
 
         for (const line of box) {
             let elem = document.createElement('p');
@@ -59,11 +60,109 @@ class Display {
             this.elems.push(elem);
             fragment.appendChild(elem);
         }
-        div.appendChild(fragment);
+        node.appendChild(fragment);
     }
 
     /**
-     * Erase all display content by printing a new empty box
+     * Animates the printing of the display on the window.<br>
+     * Begins from an existing box or appends a new one.
+     * @param {number} [duration] - duration of the animation in milliseconds.
+     * @return {Promise} - Promise that resolves when animation is over.
+     */
+    draw(duration=300) {
+        return new Promise ((resolve, reject) => {
+            function animate(timeStamp) {
+                if (start === null) start = timeStamp;
+                var raf = requestAnimationFrame(animate);
+                var progress = timeStamp - start;
+                // Defines how many glyphs and lines has to be added/removed for this frame.
+                var stepW = Math.ceil((progress / frameW) - nowW);
+                var stepH = Math.ceil((progress / frameH) - nowH);
+
+                if (stepW !== 0) {
+                    // Readjusts the add variable if the progress has gone too far.
+                    if ((stepW > 0 && nowW + stepW > totalW) || (stepW < 0 && nowW + stepW < totalW)) {
+                        stepW = totalW - nowW;
+                    }
+                    nowW += stepW;
+                    let limit = _this.elems[0].textContent.length - 1;
+                    let i = _this.elems.length - 1;
+
+                    if (stepW > 0) {
+                        let empty = ' '.repeat(stepW);
+                        let stroke = '─'.repeat(stepW);
+                        for (let line; line = _this.elems[i]; i--) {
+                            let txt = line.textContent;
+                            let adder = i === 0 || i === _this.elems.length - 1 ? stroke : empty;
+                            line.textContent = txt.slice(0, limit) + adder + txt.slice(limit);
+                        }
+                    } else if (stepW < 0) {
+                        for (let line; line = _this.elems[i]; i--) {
+                            let txt = line.textContent;
+                            line.textContent = txt.slice(0, limit + stepW) + txt.slice(limit);
+                        }
+                    }
+                }
+
+                if (stepH !== 0) {
+                    // Readjusts the add variable if the progress has gone too far.
+                    if ((stepH > 0 && nowH + stepH > totalH) || (stepH < 0 && nowH + stepH < totalH)) {
+                        stepH = totalH - nowH;
+                    }
+                    nowH += stepH;
+
+                    if (stepH > 0) {
+                        var extra = `│${' '.repeat(_this.elems[0].textContent.length - 2)}│`;
+                        for (; stepH > 0; stepH--) {
+                            let elem = document.createElement('p');
+                            elem.textContent = extra;
+                            node.insertBefore(elem, node.lastChild);
+                            _this.elems.splice(_this.elems.length - 1, 0, elem);
+                        }
+                    } else if (stepH < 0) {
+                        for (; stepH < 0; stepH++) {
+                            node.lastChild.previousElementSibling.remove();
+                            _this.elems.splice(_this.elems.length - 2, 1);
+                        }
+                    }
+                }
+
+                if (nowH === totalH && nowW === totalW) {
+                    cancelAnimationFrame(raf);
+                    resolve();
+                }
+            }
+
+            const _this = this;
+            var node = document.getElementById(this.nodeName);
+
+            if (this.elems.length === 0) {
+                var top = document.createElement('p');
+                var bottom = document.createElement('p');
+                top.textContent = '┌┐';
+                bottom.textContent = '└┘';
+                node.appendChild(top);
+                node.appendChild(bottom);
+                this.elems.push(top, bottom);
+            }
+
+            var nowW = 0;
+            var nowH = 0;
+            var totalW = this.totalWidth - this.elems[0].textContent.length;
+            var totalH = this.totalHeight - this.elems.length;
+            var frameW = duration / totalW;
+            var frameH = duration / totalH;
+            var start = null;
+
+            var check = performance.now();
+
+            requestAnimationFrame(animate);
+        });
+
+    }
+
+    /**
+     * Erase all display content by printing a new empty box.
      */
     reset() {
         var box = createBox(this.totalWidth, this.totalHeight);
@@ -73,7 +172,7 @@ class Display {
     }
 
     /**
-     * Remove display content from document
+     * Remove display content from document.
      */
     remove() {
         var display = document.getElementById(this.nodeName);
