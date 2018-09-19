@@ -11,7 +11,7 @@ import * as syntax from "./syntax.js";
 
 /**
  * Reformats sentences in lines that do not exceed the maximum size imposed.<br>
- * Use ' ' (&nbsp; character) in your strings to ensure proper orthotyping.<br>
+ * Use ' ' (&#8239; character) or ' ' (&nbsp; character) in your strings to ensure proper orthotyping.<br>
  * Syntax content will be ignored in the line length calculation.
  * @param {(string|string[])} txt - a single string with '\n' or an array of strings
  * @param {number} width - length at which lines will break
