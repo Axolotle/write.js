@@ -204,7 +204,12 @@ class Display {
         }
     }
 
-    cleanLines(startY, endY=startY, overwrite=false) {
+    /**
+     * Erase specified lines inside the display.
+     * @param {number} [startY=0] - Y coordinate of the line that have to be erased.
+     * @param {number} [endY=startY] - if specified, erase all lines between startY and endY.
+     */
+    cleanLines(startY, endY=startY) {
         startY += this.padding.y;
         endY += this.padding.y;
         var emptyLine = `│${' '.repeat(this.totalWidth - 2)}│`;
