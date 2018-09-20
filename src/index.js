@@ -1,10 +1,10 @@
-import * as format from "./format.js";
-import * as syntax from "./syntax.js";
+import * as parser from "./parser/parser.js";
+import * as syntax from "./parser/syntax.js";
 import * as utils from "./utils.js";
 import Display from "./display/display.js";
 
 export {
-    format,
+    parser,
     syntax,
     Display,
     utils

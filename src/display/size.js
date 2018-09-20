@@ -1,4 +1,4 @@
-import { split, longestWord } from '../format.js';
+import { split, longestWord } from '../parser/parser.js';
 import { has } from '../utils.js';
 
 /**
