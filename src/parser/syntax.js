@@ -17,11 +17,25 @@ export function captureFirst(str) {
 }
 
 /**
+ * Returns an array containing all syntax matches.
+ * @param {string} str
+ * @returns {array[]} Array of match arrays
+ */
+export function captureAll(str) {
+    let match, matches = [];
+    while (match = captureFirst(str)) {
+        matches.push(match);
+        str = removeFirst(str);
+    }
+    return matches;
+}
+
+/**
  * Returns a string without syntax related content
  * @param {string} str
  * @returns {string}
  */
-export function remove(str) {
+export function removeAll(str) {
     return str.replace(/\{\{[^}]+\}\}/g, "");
 }
 
@@ -40,5 +54,14 @@ export function removeFirst(str) {
  * @returns {number}
  */
 export function getRealLength(str) {
-    return this.remove(str).length;
+    return removeAll(str).length;
+}
+
+/**
+ * Indicates if given string contains syntax content.
+ * @param {string} str
+ * @returns {boolean}
+ */
+export function hasSyntax(str) {
+    return captureFirst(str) !== null;
 }
