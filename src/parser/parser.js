@@ -7,6 +7,7 @@
  */
 
 import * as syntax from "./syntax.js";
+import { has } from "../utils.js";
 
 
 /**
@@ -46,22 +47,49 @@ export function split(txt, width, startAt=0) {
 /**
  * Extracts syntax content and convert it into a options's object
  * @param {string[]} txt
- * @returns {{txt:string[], opt:Object}} Object composed of the previous text (minus syntax) and syntax's convertion object
+ * @returns {{txt:string[], opts:Object}} Object composed of the previous text (minus syntax) and syntax's convertion object
  */
-export function extractOptions(txt) {
+export function extract(txt) {
     var opts = {};
 
     txt = txt.map((line, l) => {
         let match;
         while (match = syntax.captureFirst(line)) {
-            if (!opts.hasOwnProperty(match[1])) opts[match[1]] = [];
+            if (match[1] === "tag") {
+                if (!opts.hasOwnProperty("tags")) opts.tags = [];
+                if (match[2][0] === "/") {
+                    let tagName = match[2].substr(1);
+                    for (var i = opts.tags.length - 1; i >= 0; i--) {
+                        if (opts.tags[i].name == tagName && !opts.tags[i].end) {
+                            opts.tags[i].end = {line: l, index: match.index};
+                            break;
+                        }
+                    }
+                } else {
+                    let [tagName, ...extra] = match[2].split("|");
+                    let tag = {
+                        name: tagName,
+                        start: {line: l, index: match.index}
+                    };
+                    for (let ex of extra) {
+                        let [prop, value] = ex.split("=");
+                        if (prop === "class") value = value.replace(",", " ");
+                        // TODO Check/reject onclick and other stuff like that
+                        tag[prop] = value;
+                    }
+                    opts.tags.push(tag);
+                }
+            } else {
+                if (!opts.hasOwnProperty(match[1])) opts[match[1]] = [];
 
-            opts[match[1]].push({
-                // check if match[2] can be converted to a number
-                value: !isNaN(match[2] - parseFloat(match[2])) ? +match[2] : match[2],
-                index: match.index,
-                line: l,
-            });
+                opts[match[1]].push({
+                    // check if match[2] can be converted to a number
+                    value: !isNaN(match[2] - parseFloat(match[2])) ? +match[2] : match[2],
+                    index: match.index,
+                    line: l,
+                });
+            }
+
             line = syntax.removeFirst(line);
         }
         return line;
@@ -69,7 +97,6 @@ export function extractOptions(txt) {
 
     return {txt: txt, opts: opts};
 }
-
 
 export function longestWord(words) {
     return words.reduce((a, b) => {
