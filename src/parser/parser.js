@@ -103,3 +103,87 @@ export function longestWord(words) {
         return b.length > a.length ? b : a;
     });
 }
+
+export function parse(txt) {
+    var startTag = /^<([-a-z]+)(?:\s([ -='a-z0-9]+))?>/;
+    var endTag = /^<\/([-a-z]+)>/;
+    var isHTML = (tag) => {
+        return !["pause"].includes(tag);
+    }
+    var index, match;
+
+    var tags = [];
+    var actualTag;
+    tags.last = () => {
+        return this[this.length - 1];
+    }
+
+    return txt.map(l => {
+        let line = new Tag("line");
+        actualTag = line;
+
+        var stop = 0;
+        while(l !== "") {
+            if (l.startsWith("</")) {
+                match = l.match(endTag);
+                tags.pop();
+                actualTag = tags.last();
+                l = l.substring(l.indexOf(">") + 1);
+            } else if (l.startsWith("<")) {
+                match = l.match(startTag);
+                if (isHTML(match[1])) {
+                    let tag = new Tag(match[1], match[2]);
+                    tags.push(tag);
+                    actualTag.add(tag)
+                    actualTag = tag;
+                } else {
+                    actualTag.add({"pause": 1});
+                }
+
+                l = l.substring(match[0].length);
+            } else {
+                index = l.indexOf("<");
+                let text = index < 0 ? l : l.substring(0, index);
+                l = index < 0 ? "" : l.substring(index);
+                actualTag.add(text);
+            }
+        }
+        return line;
+    });
+}
+
+export class Tag {
+    constructor(nodeName, attr) {
+        this.nodeName = nodeName;
+        this.nodes = [];
+        this.attr = {};
+    }
+
+    get length() {
+        return this.nodes.reduce((sum, node) =>{
+            if (node instanceof Tag || typeof node === 'string') {
+                return sum + node.length;
+            } else {
+                return sum;
+            }
+        }, 0);
+    }
+
+    stringify() {
+        var str = "";
+        for (let node of this.nodes) {
+            if (node instanceof Tag) {
+                str += `<${node.nodeName}>${node.stringify()}</${node.nodeName}>`
+            } else if (typeof node === "object") {
+                // str += '<pause 1>';
+            } else {
+                str += node;
+            }
+        }
+        return str;
+    }
+
+    add(content) {
+        this.nodes.push(content);
+    }
+}
