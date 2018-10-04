@@ -188,7 +188,7 @@ class Display {
      * @param {number} [startY=0] - Y coordinate at witch the print has to start.
      * @param {number} [startX=0] - X coordinate at witch the print has to start.
      */
-    print(txt, startY=0, startX=0, overwrite=false) {
+    rawPrint(txt, startY=0, startX=0, overwrite=false) {
         if (!Array.isArray(txt)) txt = [txt];
         if (!overwrite) {
             startY += this.padding.y;
@@ -202,6 +202,21 @@ class Display {
             if (startX !== this.padding.x) startX = this.padding.x;
             startY++;
         }
+    }
+
+    print(txt, startY=0, startX=0) {
+        startY += this.padding.y;
+        startX += this.padding.x;
+        for (let line of txt) {
+            let prevTxt = this.elems[startY].textContent;
+            this.elems[startY].innerHTML = prevTxt.slice(0, startX) + line.stringify() + prevTxt.slice(startX + line.length);
+            if (startX !== this.padding.x) startX = this.padding.x;
+            startY++;
+        }
+    }
+
+    animatedPrint(txt) {
+
     }
 
     /**
