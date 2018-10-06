@@ -152,6 +152,110 @@ export function parse(txt) {
     });
 }
 
+export function splitParse(txt, maxW) {
+    if (!Array.isArray(txt)) txt = txt.split("\n");
+    var startTag = /^<([-a-z]+)(?:\s([ -='a-z0-9]+))?>/;
+    var endTag = /^<\/([-a-z]+)>/;
+    var isHTML = (tag) => {
+        return !["pause", "speed"].includes(tag);
+    }
+    var getIntIfPossible = (value) => {
+        return !isNaN(value - parseFloat(value)) ? +value : value;
+    }
+    var index = 0, match;
+
+    var tags = [new Tag("span")];
+    var actualTag = tags[0];
+    tags.last = function () {
+        return this[this.length - 1];
+    }
+
+    var returned = [];
+
+    for (let l of txt) {
+        while(l !== "") {
+            if (l.startsWith("</")) {
+                match = l.match(endTag);
+                tags.pop();
+                actualTag = tags.last();
+                l = l.substring(l.indexOf(">") + 1);
+            } else if (l.startsWith("<")) {
+                match = l.match(startTag);
+                if (isHTML(match[1])) {
+                    let tag = new Tag(match[1], match[2]);
+                    tags.push(tag);
+                    actualTag.add(tag)
+                    actualTag = tag;
+                } else {
+                    let obj = {};
+                    obj[match[1]] = getIntIfPossible(match[2]);
+                    actualTag.add(obj);
+                }
+
+                l = l.substring(match[0].length);
+            } else {
+                let nextIndex = l.indexOf("<");
+                if (nextIndex < 0) nextIndex = l.length;
+
+                if (index + nextIndex > maxW) {
+                    let textToSplit = l.substring(0, nextIndex);
+                    l = l.substring(nextIndex);
+
+                    var text = "";
+                    while (textToSplit) {
+                        let nextSpace = textToSplit.indexOf(" ", 1);
+                        if (nextSpace < 0) nextSpace = textToSplit.length;
+                        if (index + nextSpace < maxW) {
+                            let content = textToSplit.substring(0, nextSpace);
+                            text += content;
+                            index += content.length;
+                            if (actualTag === tags[0] && text.startsWith(" ") && actualTag.nodes.length === 0) {
+                                index--;
+                                text = text.substring(1);
+                            }
+                            textToSplit = nextSpace < 0 ? "" : textToSplit.substring(nextSpace);
+                        } else {
+                            actualTag.add(text);
+                            returned.push(tags.shift());
+                            text = "";
+                            index = 0;
+                            let line = new Tag("span");
+                            tags.unshift(line);
+                            actualTag = line;
+                            for (let i = 1, len = tags.length; i < len; i++) {
+                                tags[i] = new Tag(tags[i].nodeName);
+                                actualTag.add(tags[i]);
+                                actualTag = tags[i];
+                            }
+                        }
+                    }
+                    actualTag.add(text);
+                } else {
+                    index += nextIndex;
+                    let text = nextIndex < 0 ? l : l.substring(0, nextIndex);
+                    if (actualTag === tags[0] && text.startsWith(" ") && actualTag.nodes.length === 0) {
+                        index--;
+                        text = text.substring(1);
+                    }
+                    l = nextIndex < 0 ? "" : l.substring(nextIndex);
+                    actualTag.add(text);
+                }
+            }
+        }
+        returned.push(tags.shift());
+        let line = new Tag("span");
+        tags.unshift(line);
+        actualTag = line;
+        for (let i = 1, len = tags.length; i < len; i++) {
+            tags[i] = new Tag(tags[i].nodeName);
+            actualTag.add(tags[i]);
+            actualTag = tags[i];
+        }
+        index = 0;
+    }
+    return returned;
+}
+
 export class Tag {
     constructor(nodeName, attr) {
         this.nodeName = nodeName;
