@@ -6,29 +6,8 @@
  * @version 1.0
  */
 
-
-/**
- * Returns the first syntax match
- * @param {string} str
- * @returns {Array} match Array
- */
-export function captureFirst(str) {
-    return str.match(/\{\{([a-z]+)::([^}]+)\}\}/);
-}
-
-/**
- * Returns an array containing all syntax matches.
- * @param {string} str
- * @returns {array[]} Array of match arrays
- */
-export function captureAll(str) {
-    let match, matches = [];
-    while (match = captureFirst(str)) {
-        matches.push(match);
-        str = removeFirst(str);
-    }
-    return matches;
-}
+export let startTag = /^<([-a-z]+)(?:\s([- ='a-z0-9]+))?>/;
+export let endTag = /^<\/([-a-z]+)>/;
 
 /**
  * Returns a string without syntax related content
@@ -36,16 +15,24 @@ export function captureAll(str) {
  * @returns {string}
  */
 export function removeAll(str) {
-    return str.replace(/\{\{[^}]+\}\}/g, "");
-}
+    var newStr = "";
+    while (str) {
+        let match;
+        if (str.startsWith("</")) {
+            match = str.match(endTag);
+        } else if (str.startsWith("<")) {
+            match = str.match(startTag);
+        }
 
-/**
- * Returns a string without first occurence of syntax related content
- * @param {string} str
- * @returns {string}
- */
-export function removeFirst(str) {
-    return str.replace(/\{\{[^}]+\}\}/, "");
+        if (match) str = str.slice(match[0].length);
+        else {
+            let nextTag = str.indexOf("<", 1);
+            if (nextTag < 0) nextTag = str.length;
+            newStr += str.slice(0, nextTag);
+            str = str.slice(nextTag);
+        }
+    }
+    return newStr;
 }
 
 /**
@@ -63,5 +50,5 @@ export function getRealLength(str) {
  * @returns {boolean}
  */
 export function hasSyntax(str) {
-    return captureFirst(str) !== null;
+    return str.match(/<([-a-z]+)(?:\s([ \-='a-z0-9]+))?>/) !== null;
 }

@@ -6,8 +6,8 @@
  * @version 1.0
  */
 
-import * as syntax from "./syntax.js";
-import { has } from "../utils.js";
+import { startTag, endTag } from "./syntax.js";
+import { has, isNumber } from "../utils.js";
 
 
 export function longestWord(words) {
@@ -27,13 +27,8 @@ export function longestWord(words) {
 export function splitParse(strs, width, startAt=0) {
     if (!Array.isArray(strs)) strs = strs.split("\n");
 
-    var startTag = /^<([-a-z]+)(?:\s([ \-='a-z0-9]+))?>/;
-    var endTag = /^<\/([-a-z]+)>/;
     var isHTML = (tag) => {
         return !["pause", "speed"].includes(tag);
-    }
-    var getIntIfPossible = (value) => {
-        return !isNaN(value - parseFloat(value)) ? +value : value;
     }
 
     var tags = [new Tag("span")];
@@ -56,22 +51,20 @@ export function splitParse(strs, width, startAt=0) {
     var glyphs;
 
     for (let str of strs) {
-        while(str !== "") {
-            glyphs = true;
-
+        while(str) {
+            let match;
             // End of html tag
             if (str.startsWith("</")) {
-                let match = str.match(endTag);
+                match = str.match(endTag);
                 if (match && tags.last().nodeName == match[1]) {
                     tags.pop();
                     currentTag = tags.last();
                     str = str.slice(match[0].length);
-                    glyphs = false;
                 }
 
             // Start of html tag + options
             } else if (str.startsWith("<")) {
-                let match = str.match(startTag);
+                match = str.match(startTag);
                 if (match) {
                     // HTML
                     if (isHTML(match[1])) {
@@ -83,16 +76,15 @@ export function splitParse(strs, width, startAt=0) {
                     // Options
                     } else {
                         let obj = {};
-                        obj[match[1]] = getIntIfPossible(match[2]);
+                        obj[match[1]] = isNumber(match[2]) ? +match[2] : match[2];
                         currentTag.add(obj);
                     }
                     str = str.slice(match[0].length);
-                    glyphs = false;
                 }
             }
 
             // text nodes
-            if (glyphs) {
+            if (!match) {
                 let nextTag = str.indexOf("<", 1);
                 if (nextTag < 0) nextTag = str.length;
                 let text = "";
