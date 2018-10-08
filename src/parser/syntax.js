@@ -6,7 +6,9 @@
  * @version 1.0
  */
 
-export let startTag = /^<([-a-z]+)(?:\s([- ='a-z0-9]+))?>/;
+import { isNumber } from "../utils.js";
+
+export let startTag = /^<([-a-z]+)(?:\s([- \.='a-z0-9]+))?>/;
 export let endTag = /^<\/([-a-z]+)>/;
 
 /**
@@ -50,5 +52,16 @@ export function getRealLength(str) {
  * @returns {boolean}
  */
 export function hasSyntax(str) {
-    return str.match(/<([-a-z]+)(?:\s([ \-='a-z0-9]+))?>/) !== null;
+    return str.match(/<([-a-z]+)(?:\s([- \.='a-z0-9]+))?>/) !== null;
+}
+
+export let options = {
+    pause(value) {
+        if (!isNumber(value)) throw new Error("argument for pause is not a number");
+        return {pause : +value};
+    },
+    speed(value) {
+        if (!isNumber(value)) throw new Error("argument for speed is not a number");
+        return {pause : +value};
+    }
 }

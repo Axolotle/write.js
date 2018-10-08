@@ -6,7 +6,7 @@
  * @version 1.0
  */
 
-import { startTag, endTag } from "./syntax.js";
+import { startTag, endTag, options } from "./syntax.js";
 import { has, isNumber } from "../utils.js";
 
 
@@ -75,9 +75,7 @@ export function splitParse(strs, width, startAt=0) {
 
                     // Options
                     } else {
-                        let obj = {};
-                        obj[match[1]] = isNumber(match[2]) ? +match[2] : match[2];
-                        currentTag.add(obj);
+                        currentTag.add(options[match[1]](match[2]));
                     }
                     str = str.slice(match[0].length);
                 }
@@ -171,11 +169,11 @@ export class Tag {
         return element;
     }
 
-    toHTMLString() {
+    get HTMLString() {
         var str = `<${this.nodeName + this.attrStr}>`;
         for (let node of this.nodes) {
             if (node instanceof Tag) {
-                str += node.toHTMLString();
+                str += node.HTMLString;
             } else if (typeof node === "string") {
                 str += node;
             }

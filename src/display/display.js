@@ -209,7 +209,7 @@ class Display {
         startX += this.padding.x;
         for (let line of txt) {
             let prevTxt = this.elems[startY].textContent;
-            this.elems[startY].innerHTML = prevTxt.slice(0, startX) + line.toHTMLString() + prevTxt.slice(startX + line.length);
+            this.elems[startY].innerHTML = prevTxt.slice(0, startX) + line.HTMLString + prevTxt.slice(startX + line.length);
             if (startX !== this.padding.x) startX = this.padding.x;
             startY++;
         }
