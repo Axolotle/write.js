@@ -36,7 +36,7 @@ export function displayContent(emitter, receiver, rest, speed) {
     return new Promise (async (resolve) => {
         for (let node of emitter.nodes) {
             if (node instanceof Tag) {
-                let newReceiver = document.createElement(node.nodeName);
+                let newReceiver = node.emptyElement;
                 receiver.appendChild(newReceiver);
                 speed = await displayContent(node, newReceiver, rest, speed);
             } else if (typeof node === "object") {

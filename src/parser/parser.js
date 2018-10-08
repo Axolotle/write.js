@@ -163,6 +163,14 @@ export class Tag {
         return str;
     }
 
+    get emptyElement() {
+        var element = document.createElement(this.nodeName);
+        for (let name in this.attrs) {
+            element.setAttribute(name, this.attrs[name]);
+        }
+        return element;
+    }
+
     toHTMLString() {
         var str = `<${this.nodeName + this.attrStr}>`;
         for (let node of this.nodes) {
