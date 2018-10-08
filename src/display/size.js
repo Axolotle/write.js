@@ -1,4 +1,5 @@
-import { split, longestWord } from '../parser/parser.js';
+import { longestWord } from '../parser/parser.js';
+import { removeAll } from "../parser/syntax.js";
 import { has } from '../utils.js';
 
 /**
@@ -13,7 +14,7 @@ function OddOrEven(n) {
     return n % 2 === 0 ? "even" : "odd";
 }
 
-function getOddOrEven(n, aspect, adder) {
+function getOddOrEven(n, aspect, adder=-1) {
     if (OddOrEven(n) !== aspect) return n + adder;
     return n;
 }
@@ -22,10 +23,10 @@ function fromMax(width, height, evenOdd) {
     return {
         width: evenOdd.width === undefined
             ? width
-            : getOddOrEven(width, evenOdd.width, -1),
+            : getOddOrEven(width, evenOdd.width),
         height: evenOdd.height === undefined
             ? height
-            : getOddOrEven(height, evenOdd.height, -1),
+            : getOddOrEven(height, evenOdd.height),
     }
 }
 
@@ -120,6 +121,7 @@ export function defineSize(
         maxHeight = screen.height,
         minWidth = 1,
         minHeight = 1,
+        hasSyntax = false,
         aspect = {},
         longestText,
         ratio,
@@ -147,6 +149,7 @@ export function defineSize(
     }
 
     if (longestText) {
+        if (hasSyntax) longestText = removeAll(longestText);
         let txt = Array.isArray(longestText) ? longestText : longestText.split('\n');
         txt = txt.map(line => line.split(' '));
         let longestLen = longestWord(txt.map(words => longestWord(words))).length;

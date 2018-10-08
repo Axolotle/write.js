@@ -6,21 +6,23 @@
  * @version 1.0
  */
 
-export function OddOrEven(value, aspect) {
-    var actualAspect = value % 2 === 0 ? "even" : "odd";
-    if (actualAspect === aspect) {
-        return value;
-    } else {
-        return value - 1;
-    }
-}
-
 export function has(obj, prop) {
     return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
+export function isNumber(value) {
+    return !isNaN(value - parseFloat(value));
+}
+
 export function sleep(ms) {
     return new Promise (resolve => setTimeout(resolve, ms));
+}
+
+export function getData(url) {
+    return fetch(url).then(response => {
+        if (response.ok) return response.json();
+        else throw new Error("Couldn't find " + url);
+    });
 }
 
 function readJSONFile(url) {
