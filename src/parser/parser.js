@@ -10,151 +10,24 @@ import * as syntax from "./syntax.js";
 import { has } from "../utils.js";
 
 
-/**
- * Reformats sentences in lines that do not exceed the maximum size imposed.<br>
- * Use ' ' (&#8239; character) or ' ' (&nbsp; character) in your strings to ensure proper orthotyping.<br>
- * Syntax content will be ignored in the line length calculation.
- * @param {(string|string[])} txt - a single string with '\n' or an array of strings
- * @param {number} width - length at which lines will break
- * @param {number} [startAt=0] - index at which the very first line will start
- * @returns {string[]} new array of string of the formated sentences
- */
-export function split(txt, width, startAt=0) {
-    if (!Array.isArray(txt)) txt = txt.split("\n");
-
-    var newTxt = [];
-    var index = startAt - 1;
-    txt.forEach(line => {
-        var newLine = [];
-        line.split(" ").forEach(word => {
-            index += 1 + syntax.getRealLength(word);
-
-            if (index <= width) {
-                newLine.push(word);
-            } else {
-                newTxt.push(newLine.join(" "));
-                newLine = [word];
-                index = word.length;
-            }
-        });
-        newTxt.push(newLine.join(" "));
-        index = -1;
-    });
-
-    return newTxt;
-}
-
-/**
- * Extracts syntax content and convert it into a options's object
- * @param {string[]} txt
- * @returns {{txt:string[], opts:Object}} Object composed of the previous text (minus syntax) and syntax's convertion object
- */
-export function extract(txt) {
-    var opts = {};
-
-    txt = txt.map((line, l) => {
-        let match;
-        while (match = syntax.captureFirst(line)) {
-            if (match[1] === "tag") {
-                if (!opts.hasOwnProperty("tags")) opts.tags = [];
-                if (match[2][0] === "/") {
-                    let tagName = match[2].substr(1);
-                    for (var i = opts.tags.length - 1; i >= 0; i--) {
-                        if (opts.tags[i].name == tagName && !opts.tags[i].end) {
-                            opts.tags[i].end = {line: l, index: match.index};
-                            break;
-                        }
-                    }
-                } else {
-                    let [tagName, ...extra] = match[2].split("|");
-                    let tag = {
-                        name: tagName,
-                        start: {line: l, index: match.index}
-                    };
-                    for (let ex of extra) {
-                        let [prop, value] = ex.split("=");
-                        if (prop === "class") value = value.replace(",", " ");
-                        // TODO Check/reject onclick and other stuff like that
-                        tag[prop] = value;
-                    }
-                    opts.tags.push(tag);
-                }
-            } else {
-                if (!opts.hasOwnProperty(match[1])) opts[match[1]] = [];
-
-                opts[match[1]].push({
-                    // check if match[2] can be converted to a number
-                    value: !isNaN(match[2] - parseFloat(match[2])) ? +match[2] : match[2],
-                    index: match.index,
-                    line: l,
-                });
-            }
-
-            line = syntax.removeFirst(line);
-        }
-        return line;
-    });
-
-    return {txt: txt, opts: opts};
-}
-
 export function longestWord(words) {
     return words.reduce((a, b) => {
         return b.length > a.length ? b : a;
     });
 }
 
-export function parse(txt) {
-    var startTag = /^<([-a-z]+)(?:\s([ -='a-z0-9]+))?>/;
-    var endTag = /^<\/([-a-z]+)>/;
-    var isHTML = (tag) => {
-        return !["pause"].includes(tag);
-    }
-    var index, match;
+/**
+ * Reformats sentences in lines that do not exceed the given width, parse syntax content (HTML or options) and returned an array of Tag instances.<br>
+ * Use ' ' (&#8239; character) or ' ' (&nbsp; character) in your strings to ensure proper orthotyping.<br>
+ * @param {(string|string[])} strs - a single string with '\n' or an array of strings
+ * @param {number} width - length at which lines will break
+ * @param {number} [startAt=0] - index at which the very first line will start
+ * @returns {string[]} new array of Tag objects of the formated sentences
+ */
+export function splitParse(strs, width, startAt=0) {
+    if (!Array.isArray(strs)) strs = strs.split("\n");
 
-    var tags = [];
-    var actualTag;
-    tags.last = () => {
-        return this[this.length - 1];
-    }
-
-    return txt.map(l => {
-        let line = new Tag("line");
-        actualTag = line;
-
-        var stop = 0;
-        while(l !== "") {
-            if (l.startsWith("</")) {
-                match = l.match(endTag);
-                tags.pop();
-                actualTag = tags.last();
-                l = l.substring(l.indexOf(">") + 1);
-            } else if (l.startsWith("<")) {
-                match = l.match(startTag);
-                if (isHTML(match[1])) {
-                    let tag = new Tag(match[1], match[2]);
-                    tags.push(tag);
-                    actualTag.add(tag)
-                    actualTag = tag;
-                } else {
-                    actualTag.add({"pause": 1});
-                }
-
-                l = l.substring(match[0].length);
-            } else {
-                index = l.indexOf("<");
-                let text = index < 0 ? l : l.substring(0, index);
-                l = index < 0 ? "" : l.substring(index);
-                actualTag.add(text);
-            }
-        }
-        return line;
-    });
-}
-
-export function splitParse(txt, maxW) {
-    if (!Array.isArray(txt)) txt = txt.split("\n");
-    var startTag = /^<([-a-z]+)(?:\s([ -='a-z0-9]+))?>/;
+    var startTag = /^<([-a-z]+)(?:\s([ \-='a-z0-9]+))?>/;
     var endTag = /^<\/([-a-z]+)>/;
     var isHTML = (tag) => {
         return !["pause", "speed"].includes(tag);
@@ -162,98 +35,105 @@ export function splitParse(txt, maxW) {
     var getIntIfPossible = (value) => {
         return !isNaN(value - parseFloat(value)) ? +value : value;
     }
-    var index = 0, match;
 
     var tags = [new Tag("span")];
-    var actualTag = tags[0];
     tags.last = function () {
         return this[this.length - 1];
     }
+    tags.reset = function () {
+        parsed.push(this.shift());
+        this.unshift(new Tag("span"));
+        for (let i = 1, len = this.length; i < len; i++) {
+            this[i] = new Tag(this[i].nodeName);
+            this[i-1].add(this[i]);
+        }
+        currentTag = this.last();
+    }
 
-    var returned = [];
+    var index = startAt;
+    var currentTag = tags[0];
+    var parsed = [];
+    var glyphs;
 
-    for (let l of txt) {
-        while(l !== "") {
-            if (l.startsWith("</")) {
-                match = l.match(endTag);
-                tags.pop();
-                actualTag = tags.last();
-                l = l.substring(l.indexOf(">") + 1);
-            } else if (l.startsWith("<")) {
-                match = l.match(startTag);
-                if (isHTML(match[1])) {
-                    let tag = new Tag(match[1], match[2]);
-                    tags.push(tag);
-                    actualTag.add(tag)
-                    actualTag = tag;
-                } else {
-                    let obj = {};
-                    obj[match[1]] = getIntIfPossible(match[2]);
-                    actualTag.add(obj);
+    for (let str of strs) {
+        while(str !== "") {
+            glyphs = true;
+
+            // End of html tag
+            if (str.startsWith("</")) {
+                let match = str.match(endTag);
+                if (match && tags.last().nodeName == match[1]) {
+                    tags.pop();
+                    currentTag = tags.last();
+                    str = str.slice(match[0].length);
+                    glyphs = false;
                 }
 
-                l = l.substring(match[0].length);
-            } else {
-                let nextIndex = l.indexOf("<");
-                if (nextIndex < 0) nextIndex = l.length;
+            // Start of html tag + options
+            } else if (str.startsWith("<")) {
+                let match = str.match(startTag);
+                if (match) {
+                    // HTML
+                    if (isHTML(match[1])) {
+                        let tag = new Tag(match[1], match[2]);
+                        tags.push(tag);
+                        currentTag.add(tag)
+                        currentTag = tag;
 
-                if (index + nextIndex > maxW) {
-                    let textToSplit = l.substring(0, nextIndex);
-                    l = l.substring(nextIndex);
-
-                    var text = "";
-                    while (textToSplit) {
-                        let nextSpace = textToSplit.indexOf(" ", 1);
-                        if (nextSpace < 0) nextSpace = textToSplit.length;
-                        if (index + nextSpace < maxW) {
-                            let content = textToSplit.substring(0, nextSpace);
-                            text += content;
-                            index += content.length;
-                            if (actualTag === tags[0] && text.startsWith(" ") && actualTag.nodes.length === 0) {
-                                index--;
-                                text = text.substring(1);
-                            }
-                            textToSplit = nextSpace < 0 ? "" : textToSplit.substring(nextSpace);
-                        } else {
-                            actualTag.add(text);
-                            returned.push(tags.shift());
-                            text = "";
-                            index = 0;
-                            let line = new Tag("span");
-                            tags.unshift(line);
-                            actualTag = line;
-                            for (let i = 1, len = tags.length; i < len; i++) {
-                                tags[i] = new Tag(tags[i].nodeName);
-                                actualTag.add(tags[i]);
-                                actualTag = tags[i];
-                            }
-                        }
+                    // Options
+                    } else {
+                        let obj = {};
+                        obj[match[1]] = getIntIfPossible(match[2]);
+                        currentTag.add(obj);
                     }
-                    actualTag.add(text);
-                } else {
-                    index += nextIndex;
-                    let text = nextIndex < 0 ? l : l.substring(0, nextIndex);
-                    if (actualTag === tags[0] && text.startsWith(" ") && actualTag.nodes.length === 0) {
-                        index--;
-                        text = text.substring(1);
-                    }
-                    l = nextIndex < 0 ? "" : l.substring(nextIndex);
-                    actualTag.add(text);
+                    str = str.slice(match[0].length);
+                    glyphs = false;
                 }
             }
+
+            // text nodes
+            if (glyphs) {
+                let nextTag = str.indexOf("<", 1);
+                if (nextTag < 0) nextTag = str.length;
+                let text = "";
+                let textToAdd = str.slice(0, nextTag);
+                str = str.slice(textToAdd.length);
+
+                if (index + nextTag > width) {
+                    while (textToAdd) {
+                        let nextSpace = textToAdd.indexOf(" ", 1);
+                        if (nextSpace < 0) nextSpace = textToAdd.length;
+                        let content = textToAdd.slice(0, nextSpace);
+
+                        if (index + nextSpace <= width) {
+                            text += content;
+                            index += content.length;
+
+                        } else {
+                            currentTag.add(text);
+                            // remove first whitespace
+                            text = content.startsWith(" ") ? content.slice(1) : content;
+                            index = text.length;
+                            tags.reset();
+
+                        }
+                        textToAdd = textToAdd.slice(content.length);
+                    }
+
+                } else {
+                    // remove first whitespace if first textnode of the line
+                    text = index === 0 && textToAdd.startsWith(" ") ? textToAdd.slice(1) : textToAdd;
+                    index += text.length;
+
+                }
+                currentTag.add(text);
+            }
         }
-        returned.push(tags.shift());
-        let line = new Tag("span");
-        tags.unshift(line);
-        actualTag = line;
-        for (let i = 1, len = tags.length; i < len; i++) {
-            tags[i] = new Tag(tags[i].nodeName);
-            actualTag.add(tags[i]);
-            actualTag = tags[i];
-        }
+        tags.reset();
         index = 0;
+
     }
-    return returned;
+    return parsed;
 }
 
 export class Tag {
@@ -287,7 +167,7 @@ export class Tag {
         return str;
     }
 
-    add(content) {
-        this.nodes.push(content);
+    add(node) {
+        this.nodes.push(node);
     }
 }
