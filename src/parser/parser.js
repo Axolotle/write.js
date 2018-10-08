@@ -22,7 +22,7 @@ export function longestWord(words) {
  * @param {(string|string[])} strs - a single string with '\n' or an array of strings
  * @param {number} width - length at which lines will break
  * @param {number} [startAt=0] - index at which the very first line will start
- * @returns {string[]} new array of Tag objects of the formated sentences
+ * @returns {Object[]} new array of Tag objects of the formated sentences
  */
 export function splitParse(strs, width, startAt=0) {
     if (!Array.isArray(strs)) strs = strs.split("\n");
@@ -68,7 +68,7 @@ export function splitParse(strs, width, startAt=0) {
                 if (match) {
                     // HTML
                     if (isHTML(match[1])) {
-                        let tag = new Tag(match[1], match[2]);
+                        let tag = new Tag(match[1], match[2] ? getAttr(match[2]) : {});
                         tags.push(tag);
                         currentTag.add(tag)
                         currentTag = tag;
@@ -128,11 +128,21 @@ export function splitParse(strs, width, startAt=0) {
     return parsed;
 }
 
+export function getAttr(str) {
+    var attrs = {};
+    str.split(" ").forEach(attr => {
+        let [name, value] = attr.split("=");
+        if (value.indexOf("'") > -1) value = value.slice(1, value.length - 1);
+        attrs[name] = value;
+    });
+    return attrs;
+}
+
 export class Tag {
-    constructor(nodeName, attr) {
+    constructor(nodeName, attrs) {
         this.nodeName = nodeName;
         this.nodes = [];
-        this.attr = {};
+        this.attrs = attrs;
     }
 
     get length() {
@@ -145,18 +155,24 @@ export class Tag {
         }, 0);
     }
 
-    stringify() {
+    get attrStr() {
         var str = "";
+        for (let name in this.attrs) {
+            str += ` ${name}="${this.attrs[name]}"`;
+        }
+        return str;
+    }
+
+    toHTMLString() {
+        var str = `<${this.nodeName + this.attrStr}>`;
         for (let node of this.nodes) {
             if (node instanceof Tag) {
-                str += `<${node.nodeName}>${node.stringify()}</${node.nodeName}>`
-            } else if (typeof node === "object") {
-                // str += '<pause 1>';
-            } else {
+                str += node.toHTMLString();
+            } else if (typeof node === "string") {
                 str += node;
             }
         }
-        return str;
+        return str + `</${this.nodeName}>`;
     }
 
     add(node) {
