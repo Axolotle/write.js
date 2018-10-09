@@ -8,7 +8,7 @@
 
 import { isNumber } from "../utils.js";
 
-export let startTag = /^<([-a-z]+)(?:\s([- \.='a-z0-9]+))?>/;
+export let startTag = /^<([-a-z]+)(?:\s([- \.="'a-z0-9]+))?>/;
 export let endTag = /^<\/([-a-z]+)>/;
 
 /**

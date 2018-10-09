@@ -40,7 +40,7 @@ export function splitParse(strs, width, startAt=0) {
         parsed.push(this.shift());
         this.unshift(new Line());
         for (let i = 1, len = this.length; i < len; i++) {
-            this[i] = new Tag(this[i].nodeName);
+            this[i] = new Tag(this[i].nodeName, this[i].attrs);
             this[i-1].push(this[i]);
         }
         currentTag = this.last();
@@ -135,4 +135,50 @@ export function getAttr(str) {
         attrs[name] = value;
     });
     return attrs;
+}
+
+export function cutHTML(str, cutIndex) {
+    var tags = [];
+    tags.startTags = function () {
+        return this.reduce((str, tag) => {
+            return str + `<${tag.nodeName + tag.attrStr}>`
+        }, "");
+    }
+
+    var index = 0;
+    var found = false
+    while (found === false) {
+        let match;
+        // End of html tag
+        if (str.startsWith("</")) {
+            match = str.match(endTag);
+            if (match) {
+                tags.pop();
+                str = str.slice(match[0].length);
+            }
+
+        // Start of html tag + options
+        } else if (str.startsWith("<")) {
+            match = str.match(startTag);
+            if (match) {
+                tags.push(new Tag(match[1], match[2] ? getAttr(match[2]) : {}));
+                str = str.slice(match[0].length);
+            }
+        }
+
+        if (!match) {
+            let nextTag = str.indexOf("<", 1);
+            if (nextTag < 0) nextTag = str.length;
+            let textToAdd = str.slice(0, nextTag);
+
+            if (index + nextTag === cutIndex) {
+                return "";
+            } else if (index + nextTag > cutIndex) {
+                return tags.startTags() + str.slice(cutIndex - index);
+            } else {
+                index += textToAdd.length;
+                str = str.slice(textToAdd.length);
+            }
+        }
+    }
 }
