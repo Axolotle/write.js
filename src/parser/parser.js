@@ -7,6 +7,7 @@
  */
 
 import { startTag, endTag, options } from "./syntax.js";
+import { Txt, Line, Tag } from "./objects.js";
 import { has, isNumber } from "../utils.js";
 
 
@@ -31,23 +32,23 @@ export function splitParse(strs, width, startAt=0) {
         return !["pause", "speed"].includes(tag);
     }
 
-    var tags = [new Tag("span")];
+    var tags = [new Line()];
     tags.last = function () {
         return this[this.length - 1];
     }
     tags.reset = function () {
         parsed.push(this.shift());
-        this.unshift(new Tag("span"));
+        this.unshift(new Line());
         for (let i = 1, len = this.length; i < len; i++) {
             this[i] = new Tag(this[i].nodeName);
-            this[i-1].add(this[i]);
+            this[i-1].push(this[i]);
         }
         currentTag = this.last();
     }
 
     var index = startAt;
     var currentTag = tags[0];
-    var parsed = [];
+    var parsed = new Txt();
     var glyphs;
 
     for (let str of strs) {
@@ -70,12 +71,12 @@ export function splitParse(strs, width, startAt=0) {
                     if (isHTML(match[1])) {
                         let tag = new Tag(match[1], match[2] ? getAttr(match[2]) : {});
                         tags.push(tag);
-                        currentTag.add(tag)
+                        currentTag.push(tag)
                         currentTag = tag;
 
                     // Options
                     } else {
-                        currentTag.add(options[match[1]](match[2]));
+                        currentTag.push(options[match[1]](match[2]));
                     }
                     str = str.slice(match[0].length);
                 }
@@ -100,7 +101,7 @@ export function splitParse(strs, width, startAt=0) {
                             index += content.length;
 
                         } else {
-                            currentTag.add(text);
+                            currentTag.push(text);
                             // remove first whitespace
                             text = content.startsWith(" ") ? content.slice(1) : content;
                             index = text.length;
@@ -116,7 +117,7 @@ export function splitParse(strs, width, startAt=0) {
                     index += text.length;
 
                 }
-                currentTag.add(text);
+                currentTag.push(text);
             }
         }
         tags.reset();
@@ -134,54 +135,4 @@ export function getAttr(str) {
         attrs[name] = value;
     });
     return attrs;
-}
-
-export class Tag {
-    constructor(nodeName, attrs) {
-        this.nodeName = nodeName;
-        this.nodes = [];
-        this.attrs = attrs;
-    }
-
-    get length() {
-        return this.nodes.reduce((sum, node) =>{
-            if (node instanceof Tag || typeof node === 'string') {
-                return sum + node.length;
-            } else {
-                return sum;
-            }
-        }, 0);
-    }
-
-    get attrStr() {
-        var str = "";
-        for (let name in this.attrs) {
-            str += ` ${name}="${this.attrs[name]}"`;
-        }
-        return str;
-    }
-
-    get emptyElement() {
-        var element = document.createElement(this.nodeName);
-        for (let name in this.attrs) {
-            element.setAttribute(name, this.attrs[name]);
-        }
-        return element;
-    }
-
-    get HTMLString() {
-        var str = `<${this.nodeName + this.attrStr}>`;
-        for (let node of this.nodes) {
-            if (node instanceof Tag) {
-                str += node.HTMLString;
-            } else if (typeof node === "string") {
-                str += node;
-            }
-        }
-        return str + `</${this.nodeName}>`;
-    }
-
-    add(node) {
-        this.nodes.push(node);
-    }
 }
