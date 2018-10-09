@@ -190,9 +190,18 @@ class Display {
     /**
      * Erase all display content and print a new empty box.
      */
-    reset() {
-        this.remove();
-        this.display();
+    reset(hard=false) {
+        if (hard) {
+            this.remove();
+            this.display();
+        } else {
+            let lines = this.lines;
+            let emptyLine = this.fill.repeat(this.width)
+            for (let line of lines) {
+                line.textContent = emptyLine;
+            }
+        }
+
     }
 
     /**
@@ -240,13 +249,12 @@ class Display {
      * @param {number} [startY=0] - Y coordinate of the line that have to be erased.
      * @param {number} [endY=startY] - if specified, erase all lines between startY and endY.
      */
-    cleanLines(startY, endY=startY) {
-        startY += this.padding.y;
-        endY += this.padding.y;
-        var emptyLine = `│${' '.repeat(this.totalWidth - 2)}│`;
+    resetLines(startY, endY=startY) {
+        let lines = this.lines;
+        let emptyLine = this.fill.repeat(this.width);
 
         for (startY; startY <= endY; startY++) {
-            this.elems[startY].textContent = emptyLine;
+            lines[startY].textContent = emptyLine;
         }
     }
 }
