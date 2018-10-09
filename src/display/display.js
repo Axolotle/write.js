@@ -12,12 +12,17 @@ class Display {
      */
     constructor(nodeName='display', options) {
         this.nodeName = nodeName;
-        this.elems = [];
-
+        this.elem = document.getElementById(nodeName);
         this.margin = {x: 0, y: 0};
         this.padding = {x: 0, y: 0};
 
+        this.stroke = ["┌", "─", "┐", "│", " ", "│", "└", "─", "┘"];
+        this.fill = " ";
         if (options) this.init(options);
+    }
+
+    get lines() {
+        return Array.from(this.elem.getElementsByClassName("line"));
     }
 
     /**
@@ -28,6 +33,7 @@ class Display {
     init(options) {
         if (has(options, 'margin')) this.margin = options.margin;
         if (has(options, 'padding')) this.padding = options.padding;
+        if (has(options, 'stroke')) this.stroke = options.stroke;
         this.glyph = getGlyphDimensions(this.nodeName);
         this.screen = getWindowDimensions(this.glyph, this.margin);
 
@@ -46,21 +52,41 @@ class Display {
         return this;
     }
 
+    get EmptyContent() {
+        var top = this.stroke[0] + this.stroke[1].repeat(this.totalWidth - 2) + this.stroke[2];
+        var bottom = this.stroke[6] + this.stroke[7].repeat(this.totalWidth - 2) + this.stroke[8];
+        var paddY = Array(this.padding.y - 1).fill(
+            this.stroke[3] + this.stroke[4].repeat(this.totalWidth -2) + this.stroke[5]
+        )
+        var content = Array(this.height).fill([
+            this.stroke[3] + this.stroke[4].repeat(this.padding.x -1),
+            this.fill.repeat(this.width),
+            this.stroke[4].repeat(this.padding.x -1) + this.stroke[5]
+        ])
+        return [top, ...paddY, ...content, ...paddY, bottom];
+    }
+
     /**
      * Append a clean box to the node element.
      */
     display() {
-        var box = createBox(this.totalWidth, this.totalHeight);
+        var box = this.EmptyContent;
         var fragment = document.createDocumentFragment();
-        var node = document.getElementById(this.nodeName);
-
-        for (const line of box) {
-            let elem = document.createElement('p');
-            elem.textContent = line;
-            this.elems.push(elem);
-            fragment.appendChild(elem);
+        for (let line of box) {
+            let elemLine = document.createElement('p');
+            if (Array.isArray(line)) {
+                elemLine.appendChild(document.createTextNode(line[0]))
+                let content = document.createElement("span");
+                content.classList.add("line");
+                content.textContent = line[1];
+                elemLine.appendChild(content);
+                elemLine.appendChild(document.createTextNode(line[2]))
+            } else {
+                elemLine.textContent = line;
+            }
+            fragment.appendChild(elemLine);
         }
-        node.appendChild(fragment);
+        this.elem.appendChild(fragment);
     }
 
     /**
@@ -139,8 +165,8 @@ class Display {
             if (this.elems.length === 0) {
                 var top = document.createElement('p');
                 var bottom = document.createElement('p');
-                top.textContent = '┌┐';
-                bottom.textContent = '└┘';
+                top.textContent = this.stroke[0] + this.stroke[2];
+                bottom.textContent = this.stroke[6] + this.stroke[8];
                 node.appendChild(top);
                 node.appendChild(bottom);
                 this.elems.push(top, bottom);
@@ -162,24 +188,20 @@ class Display {
     }
 
     /**
-     * Erase all display content by printing a new empty box.
+     * Erase all display content and print a new empty box.
      */
     reset() {
-        var box = createBox(this.totalWidth, this.totalHeight);
-        this.elems.forEach((elem, i) => {
-            elem.textContent = box[i];
-        });
+        this.remove();
+        this.display();
     }
 
     /**
      * Remove display content from document.
      */
     remove() {
-        var display = document.getElementById(this.nodeName);
-        while (display.lastChild) {
-            display.lastChild.remove();
+        while (this.elem.lastChild) {
+            this.elem.lastChild.remove();
         }
-        this.elems = [];
     }
 
     /**
@@ -205,18 +227,12 @@ class Display {
     }
 
     print(txt, startY=0, startX=0) {
-        startY += this.padding.y;
-        startX += this.padding.x;
+        var lines = this.lines;
         for (let line of txt) {
-            let prevTxt = this.elems[startY].textContent;
-            this.elems[startY].innerHTML = prevTxt.slice(0, startX) + line.HTMLString + prevTxt.slice(startX + line.length);
-            if (startX !== this.padding.x) startX = this.padding.x;
+            let prevTxt = lines[startY].textContent;
+            lines[startY].innerHTML = prevTxt.slice(0, startX) + line.HTMLString + prevTxt.slice(startX + line.textLength);
             startY++;
         }
-    }
-
-    animatedPrint(txt) {
-
     }
 
     /**
@@ -233,19 +249,6 @@ class Display {
             this.elems[startY].textContent = emptyLine;
         }
     }
-}
-
-function createBox(width, height) {
-    var lines = '─'.repeat(width - 2);
-    var spaces = `│${' '.repeat(width - 2)}│`;
-    var box = [];
-
-    for (let n = 0; n < height; n++) {
-        if (n === 0) box.push(`┌${lines}┐`);
-        else if (n === height - 1) box.push(`└${lines}┘`);
-        else box.push(spaces);
-    }
-    return box;
 }
 
 export default Display;
