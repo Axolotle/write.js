@@ -1,4 +1,4 @@
-import { Tag } from "./parser/parser.js";
+import { Tag } from "./parser/objects.js";
 import { sleep, has } from "./utils.js";
 
 export async function animate(txt, display, split="", speed=70, startX=0, startY=0) {

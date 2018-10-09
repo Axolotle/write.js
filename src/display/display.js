@@ -1,5 +1,6 @@
 import { getGlyphDimensions, getWindowDimensions, defineSize } from './size.js';
 import { has } from '../utils.js';
+import { splitParse, cutHTML } from "../parser/parser.js";
 
 /**
  * Displays content on screen.
@@ -235,12 +236,10 @@ class Display {
         }
     }
 
-    print(txt, startY=0, startX=0) {
+    print(txt, startY=0) {
         var lines = this.lines;
         for (let line of txt) {
-            let prevTxt = lines[startY].textContent;
-            lines[startY].innerHTML = prevTxt.slice(0, startX) + line.HTMLString + prevTxt.slice(startX + line.textLength);
-            startY++;
+            lines[startY++].innerHTML = line.HTMLString + cutHTML(lines[startY].innerHTML, line.textLength);
         }
     }
 

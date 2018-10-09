@@ -86,10 +86,4 @@ export class Tag {
     push(node) {
         this.nodes.push(node);
     }
-
-    init(parent) {
-        var child = this.emptyElement;
-        parent.appendChild(child);
-        return child;
-    }
 }
