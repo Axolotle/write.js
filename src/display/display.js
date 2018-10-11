@@ -239,7 +239,8 @@ class Display {
     print(txt, startY=0) {
         var lines = this.lines;
         for (let line of txt) {
-            lines[startY++].innerHTML = line.HTMLString + cutHTML(lines[startY].innerHTML, line.textLength);
+            lines[startY].innerHTML = line.HTMLString + cutHTML(lines[startY].innerHTML, line.textLength);
+            startY++;
         }
     }
 

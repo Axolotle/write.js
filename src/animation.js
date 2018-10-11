@@ -2,38 +2,81 @@ import { Tag } from "./parser/objects.js";
 import { sleep, has } from "./utils.js";
 
 export async function animate(txt, display, split="", speed=70, startX=0, startY=0) {
-    var domNodes = document.getElementById(display.nodeName).children;
-    startY += display.padding.y;
-    startX += display.padding.x;
-    var nodes = [];
-    nodes.last = () => {
-        return this[this.length - 1];
-    };
+    var prevLines = display.lines;
 
-    for (let l = 0, txtLen = txt.length; l < txtLen; l++) {
-        let prevTxt = domNodes[l+startY].textContent;
-        let doc = document.createElement("p");
-        let rest = document.createTextNode(prevTxt.slice(startX, prevTxt.length - display.padding.x));
-        var receiver = document.createElement("span");
+    for (let line of txt) {
+        function getTextNode (node) {
+            if(node.constructor === Text) {
+                return node;
+            } else if (!node.hasChildNodes()) {
+                let next;
+                if (node.nextSibling) {
+                    next = node.nextSibling;
+                } else {
+                    next = node.parentNode;
+                }
+                node.remove()
+                return getTextNode(next);
+            } else {
+                if (node.classList.contains("line")) {
+                    return getTextNode(rest.first());
+                } else {
+                    return getTextNode(node.firstChild);
+                }
 
+            }
+        }
 
-        doc.appendChild(document.createTextNode(prevTxt.slice(0, startX)));
-        doc.appendChild(receiver);
-        doc.appendChild(rest);
-        doc.appendChild(document.createTextNode(prevTxt.slice(prevTxt.length - display.padding.x)));
-        domNodes[l+startY].replaceWith(doc);
+        let prevLine = prevLines[startY];
+        let rest = Array.from(prevLine.childNodes);
+        rest.first = function () {
+            for (let node of this) {
+                if (node.textContent !== "") return node;
+            }
+        }
+        rest.removeGlyph = function () {
+            let t = this.textNode.textContent;
+            if (t.length > 0) {
+                this.textNode.textContent = t.slice(1);
+            } else {
+                let parent = this.textNode.parentNode;
+                this.textNode.remove();
+                this.textNode = getTextNode(parent);
+                this.removeGlyph();
+            }
+        }
+        rest.textNode = getTextNode(rest[0]);
 
-        let line = txt[l].nodes;
-        var actualDomNode;
+        for (let node of line) {
+            if (node instanceof Tag) {
+                let newReceiver = node.emptyElement;
+                prevLine.insertBefore(newReceiver, rest[0]);
+                speed = await displayContent(node, newReceiver, rest, speed);
+            } else if (typeof node === "object") {
+                if (has(node, "pause")) {
+                    await sleep(node.pause * 1000);
+                } else if (has(node, "speed")) {
+                    speed += node.speed * -10;
+                }
+            } else {
+                let sentence = node.split("");
+                let newReceiver = document.createTextNode("");
+                prevLine.insertBefore(newReceiver, rest[0]);
+                for (let glyph of sentence) {
+                    newReceiver.textContent += glyph;
+                    rest.removeGlyph();
+                    await sleep(speed);
+                }
+            }
+        }
 
-
-        speed = await displayContent(txt[l], receiver, rest, speed);
-
+        startY++;
     }
 }
 
 export function displayContent(emitter, receiver, rest, speed) {
     return new Promise (async (resolve) => {
+        console.log(emitter);
         for (let node of emitter.nodes) {
             if (node instanceof Tag) {
                 let newReceiver = node.emptyElement;
@@ -51,7 +94,7 @@ export function displayContent(emitter, receiver, rest, speed) {
                 receiver.appendChild(newReceiver);
                 for (let glyph of sentence) {
                     newReceiver.textContent += glyph;
-                    rest.textContent = rest.textContent.slice(1);
+                    rest.removeGlyph();
                     await sleep(speed);
                 }
             }
