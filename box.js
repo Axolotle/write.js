@@ -526,3 +526,32 @@ Box.prototype.drawError = function(message) {
     div.appendChild(err);
 
 };
+
+Box.prototype.fill = function(txt) {
+    var len = this.lines.length;
+    for (var i = 0; i < len; i++) {
+        this.lines[i].textContent = txt[i];
+    }
+}
+
+Box.prototype.setupAnim = function(txt) {
+    var len = this.lines.length;
+    var extraSpace = (this.x - this.lines[0].textContent.length) / 2;
+    extraSpace = " ".repeat(extraSpace)
+    for (let i = 0; i < len; i++) {
+        this.lines[i].textContent = extraSpace + this.lines[i].textContent + extraSpace;
+    }
+
+    // var extraHeigth = (this.y - len) / 2;
+    // var emptyLine = "" + " ".repeat(this.x) + "";
+    // var div = document.getElementById(this.div);
+    // for (let i = 0; i < extraHeigth; i++) {
+    //     let top = document.createElement("p");
+    //     top.textContent = emptyLine;
+    //     div.prepend(top);
+    //     let bot = document.createElement("p");
+    //     bot.textContent = emptyLine;
+    //     div.append(bot);
+    //
+    // }
+}
