@@ -31,7 +31,7 @@ Box.prototype.init = function(opt) {
             this.y = boxSize.y;
             resolve();
         } else {
-            reject("Écran trop petit !");
+            reject("Écran trop petit, passez en mode plein écran (F11) ou bien modifiez l'affichage (ctrl+-) avant de recharger la page (F5)");
         }
     });
 };
@@ -505,12 +505,12 @@ Box.prototype.drawError = function(message) {
             sentence += sentence.length > 0 ? " " + word : word;
         } else {
             if (sentence.length + 2 > longest) longest = sentence.length + 2;
-            sentences.push(sentence + " │");
+            sentences.push(sentence + " ".repeat(longest - sentence.length - 1) + "│");
             sentence = "│ ";
             width = 2;
         }
     });
-    sentences.push(sentence + " │");
+    sentences.push(sentence + " ".repeat(longest - sentence.length - 1) + "│");
     if (sentence.length + 2 > longest) longest = sentence.length + 2;
     sentences.unshift("┌" + "─".repeat(longest - 2) + "┐");
     sentences.push("└" + "─".repeat(longest - 2) + "┘");
